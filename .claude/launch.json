@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "original",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["replica/tools/serve.mjs", "replica/original", "5501"],
+      "port": 5501
+    },
+    {
+      "name": "pesquisa-precos",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["pesquisa-precos/server/server.mjs"],
+      "port": 5600
+    },
+    {
+      "name": "replica",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["replica/tools/serve.mjs", "replica/clone/web", "5502", "replica/clone/dev"],
+      "port": 5502
+    }
+  ]
+}

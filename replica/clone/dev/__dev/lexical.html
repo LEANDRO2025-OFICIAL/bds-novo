@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>Editor simulado</title>
+    <style>
+      body { margin: 0; padding: 12px; font: 15px/1.5 system-ui, sans-serif; color-scheme: light dark; }
+      #doc { min-height: 60px; padding: 8px; border: 1px dashed #888; border-radius: 6px; }
+    </style>
+  </head>
+  <body>
+    <div id="doc" contenteditable="true" aria-label="Conteúdo do editor"></div>
+    <small id="info"></small>
+    <script>
+      // Editor FALSO para testar a ponte. Implementa o lado filho do contrato:
+      //  - aceita mensagens só do pai e da mesma origem
+      //  - responde 'lexical:changed' e anuncia 'lexical:ready' ao carregar
+      (function () {
+        var received = [];
+        window.__received = received;
+        window.addEventListener('message', function (event) {
+          if (event.source !== window.parent || event.origin !== location.origin) return;
+          var msg = event.data || {};
+          received.push(msg);
+          if (msg.type === 'setText') {
+            document.getElementById('doc').textContent = String(msg.payload);
+            window.parent.postMessage({ type: 'lexical:changed', payload: String(msg.payload) }, location.origin);
+          }
+          document.getElementById('info').textContent = received.length + ' mensagem(ns) recebida(s)';
+        });
+        window.parent.postMessage({ type: 'lexical:ready' }, location.origin);
+      })();
+    </script>
+  </body>
+</html>

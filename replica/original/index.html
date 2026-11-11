@@ -1,0 +1,164 @@
+<!doctype html>
+<html>
+  <head>
+    <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+    <base href="/" />
+
+    <meta charset="UTF-8" />
+    <meta content="IE=Edge" http-equiv="X-UA-Compatible" />
+    <meta name="description" content="Sistema de Gestão Pública." />
+
+    <!-- iOS meta tags & icons -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <title>Gestão Pública</title>
+
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f2f0f1" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#212121" />
+
+    <link rel="manifest" href="manifest.json" />
+
+    <!-- Favicon -->
+    <link id="favicon" rel="icon" type="image/png" href="favicon.ico" />
+
+    <script>
+      function sendToLexical(type, message) {
+        window.top.frames[0].postMessage({ type: type, payload: message }, '*');
+      }
+    </script>
+
+    <style type="text/css">
+      @font-face {
+        font-family: 'Ubuntu Mono';
+        font-style: normal;
+        font-weight: 400;
+        font-display: swap;
+        src: url(/assets/assets/fonts/UbuntuMono-Regular.ttf) format('ttf');
+      }
+
+      * {
+        font-family: 'Ubuntu Mono', monospace !important;
+        caret-color: transparent !important;
+      }
+
+      @media (-webkit-max-device-pixel-ratio: 1.2) {
+        * {
+          image-rendering: pixelated;
+        }
+      }
+
+      .sistemasbds {
+        font-size: 1.8em;
+        margin-bottom: 10px;
+      }
+
+      .flutter-loader {
+        display: none;
+      }
+
+      @media (prefers-color-scheme: light) {
+        body {
+          background-color: #f2f0f1;
+          color: #222 !important;
+        }
+      }
+
+      @media (prefers-color-scheme: dark) {
+        body {
+          background-color: #212121;
+          color: #fff !important;
+        }
+      }
+
+      .loading {
+        display: flex;
+        justify-content: center;
+        flex-direction: column;
+        align-items: center;
+        margin: 0;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        -ms-transform: translate(-50%, -50%);
+        transform: translate(-50%, -50%);
+      }
+
+      .loader {
+        border: 3px solid #00bcd4;
+        border-radius: 50%;
+        border-left: 3px solid transparent;
+        width: 24px;
+        height: 24px;
+        -webkit-animation: spin 1s linear infinite;
+        animation: spin 1s linear infinite;
+      }
+
+      @-webkit-keyframes spin {
+        0% {
+          -webkit-transform: rotate(0deg);
+        }
+
+        100% {
+          -webkit-transform: rotate(360deg);
+        }
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="loading">
+      <div class="loader"></div>
+    </div>
+
+    <script>
+      window.onload = function () {
+        let favicon = document.getElementById('favicon');
+        let domain = window.location.host.split('.')[1];
+
+        favicon.href = 'favicon' + (domain ? '-' + domain : '') + '.ico';
+      };
+    </script>
+
+    <script>
+      document.addEventListener('keydown', (event) => {
+        if (event.code == 'Tab') {
+          event.preventDefault();
+        }
+      });
+
+      window.addEventListener('flutter-first-frame', function () {
+        let el = document.getElementsByClassName('loading')[0];
+        if (el != undefined && el != null) el.remove();
+      });
+    </script>
+
+    <script
+      type="application/javascript"
+      src="/assets/packages/flutter_inappwebview_web/assets/web/web_support.js"
+      defer
+    ></script>
+
+    <script src="flutter_bootstrap.js" async></script>
+  </body>
+</html>

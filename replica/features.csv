@@ -1,0 +1,24 @@
+feature,area,priority,original,clone,notes
+Indicador de carregamento até o primeiro quadro do Flutter,boot,must,yes,yes,E2E F01-H1; loader sai do DOM com fade
+Tema claro/escuro do fundo e theme-color,boot,must,yes,yes,tokens com contraste AA nos dois temas (24 pares)
+Favicon por tenant (subdomínio),identidade,must,yes,yes,regra compat + fallback; unit tests resolveTenant; E2E F02-H1
+Ponte JS sendToLexical(type; payload) para o editor,integração,must,yes,yes,mesma assinatura; origem exata; nunca lança (E2E F03-*)
+Carregar web_support.js do flutter_inappwebview_web,integração,must,yes,yes,caminho agora relativo ao base href
+Carregar flutter_bootstrap.js,boot,must,yes,yes,template customizado com fases e captura de erro
+Base href substituível pelo flutter build,deploy,must,no,yes,$FLUTTER_BASE_HREF; E2E F01-E2
+Estado de erro com tentar novamente,boot,must,no,yes,4 tipos de erro; E2E F01-N1..N4
+Navegação por teclado acessível,a11y,must,no,yes,Tab livre no cartão de erro e com leitor de tela; E2E F04-H1
+Política de Tab configurável (preservar comportamento do app),a11y,should,partial,yes,data-tab-policy app|always|never
+Caret transparente apenas nos campos internos do Flutter,a11y,should,partial,partial,escopado por nomes internos do Flutter (flt-text-editing-host); não validado contra um build Flutter real
+Fonte Ubuntu Mono carregando de fato,visual,should,no,yes,format('truetype') registra a face e dispara a requisição (verificado); o .ttf vem do projeto
+Aviso noscript,boot,should,no,yes,noscript + classe no-js
+Timeout com mensagem de lentidão,boot,should,no,yes,E2E F01-E1 e F01-N3
+Respeitar prefers-reduced-motion,a11y,should,no,partial,CSS e remoção sem fade implementados; não emulado no teste
+lang pt-BR e meta viewport,a11y,should,no,yes,verificado em runtime
+Fases de boot visíveis (motor / app),boot,could,no,yes,bootstrap → engine → app (E2E F01-H1 timings)
+Scripts externos compatíveis com CSP sem unsafe-inline,segurança,could,no,yes,provado sob CSP script-src 'self' (evidence/csp-strict.json)
+Handshake e fila de mensagens da ponte Lexical,integração,could,no,yes,E2E F03-H1
+Telemetria de tempo de boot (performance.mark),observabilidade,could,no,yes,GestaoBoot.timings() + marks gp:*
+App Flutter de gestão pública,produto,skip,yes,skip,não fornecido; fora do escopo clean-room
+Editor Lexical,integração,skip,yes,skip,componente de terceiro; só o contrato da ponte é replicado
+Ícones e marca de cada tenant,identidade,skip,yes,skip,ativos do cliente; réplica usa placeholders

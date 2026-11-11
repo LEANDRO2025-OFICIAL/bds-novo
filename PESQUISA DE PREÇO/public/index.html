@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Banco de Preços LS</title>
+    <meta name="description" content="Pesquisa de preços em contratações públicas (Compras.gov.br) conforme a IN SEGES/ME 65/2021." />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="app.css" />
+    <script type="module" src="app.js"></script>
+  </head>
+  <body>
+    <a class="pular" href="#conteudo">Pular para o conteúdo</a>
+    <header class="topo nao-imprimir">
+      <a class="marca" href="#/">
+        <svg viewBox="0 0 24 24" aria-hidden="true" class="marca__icone"><path d="M3 5h18v2H3zm2 4h14v10H5zm3 2v2h8v-2zm0 4v2h5v-2z" /></svg>
+        <span>Banco de Preços LS</span>
+      </a>
+      <div id="status-catalogo" class="status-catalogo" role="status" aria-live="polite"></div>
+      <div id="sessao" class="sessao"></div>
+    </header>
+    <main id="conteudo" tabindex="-1"></main>
+    <div id="aviso" class="aviso" role="alert" aria-live="assertive" hidden></div>
+    <noscript><p class="noscript">Ative o JavaScript para usar o sistema.</p></noscript>
+  </body>
+</html>

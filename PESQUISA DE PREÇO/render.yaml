@@ -1,0 +1,23 @@
+# Blueprint do Render: um serviço web Node com disco persistente para o banco SQLite.
+services:
+  - type: web
+    name: banco-de-precos-ls
+    runtime: node
+    plan: starter # disco persistente exige plano pago
+    region: virginia # mais próxima do Brasil entre as do Render
+    buildCommand: npm install
+    startCommand: node server/server.mjs
+    healthCheckPath: /api/sessao
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: HOST
+        value: 0.0.0.0
+      - key: DB_PATH
+        value: /var/data/pesquisa-precos.db
+      - key: USUARIOS # "nome:senha;outro:senha" — preenchido no painel, nunca no Git
+        sync: false
+    disk:
+      name: dados
+      mountPath: /var/data
+      sizeGB: 1

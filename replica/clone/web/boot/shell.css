@@ -1,0 +1,303 @@
+/* Gestão Pública — estilos do shell de inicialização.
+   Tokens espelham replica/design/tokens.json (claro) e tokens.dark.json (escuro). */
+
+@font-face {
+  font-family: 'Ubuntu Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  /* Relativo a este arquivo → respeita o base href. 'truetype' é o nome válido do formato. */
+  src: url('../assets/assets/fonts/UbuntuMono-Regular.ttf') format('truetype');
+}
+
+:root {
+  color-scheme: light dark;
+
+  --gp-bg: #f2f0f1;
+  --gp-surface: #ffffff;
+  --gp-border: #d9d5d7;
+  --gp-border-input: #7a7376;
+  --gp-text: #222222;
+  --gp-text-muted: #5c5559;
+  --gp-accent: #0e7490;
+  --gp-on-accent: #ffffff;
+  --gp-danger: #b42318;
+
+  --gp-font: 'Ubuntu Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --gp-text-sm: 0.875rem;
+  --gp-text-base: 1rem;
+  --gp-text-lg: 1.25rem;
+  --gp-text-brand: 1.8rem;
+
+  --gp-space-1: 4px;
+  --gp-space-2: 8px;
+  --gp-space-3: 12px;
+  --gp-space-4: 16px;
+  --gp-space-5: 24px;
+  --gp-space-6: 32px;
+
+  --gp-radius-sm: 6px;
+  --gp-radius-md: 10px;
+  --gp-shadow-card: 0 1px 2px rgba(16, 24, 40, 0.06), 0 4px 16px rgba(16, 24, 40, 0.08);
+
+  --gp-spinner: 24px;
+  --gp-spinner-stroke: 3px;
+  --gp-card-max: 420px;
+  --gp-spin: 1s;
+  --gp-fade: 240ms;
+  --gp-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --gp-bg: #212121;
+    --gp-surface: #2b2b2b;
+    --gp-border: #3d3d3d;
+    --gp-border-input: #8a8a8a;
+    --gp-text: #ffffff;
+    --gp-text-muted: #b8b8b8;
+    --gp-accent: #00bcd4;
+    --gp-on-accent: #062a30;
+    --gp-danger: #ff8a80;
+    --gp-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.35);
+  }
+}
+
+html {
+  font-family: var(--gp-font);
+  background-color: var(--gp-bg);
+  color: var(--gp-text);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background-color: var(--gp-bg);
+  color: var(--gp-text);
+}
+
+/* --- Políticas herdadas do original, agora escopadas ---------------------- */
+
+/* Caret: o Flutter desenha o próprio cursor; o input HTML oculto não deve piscar por cima. */
+html[data-caret-policy='flutter'] flt-text-editing-host input,
+html[data-caret-policy='flutter'] flt-text-editing-host textarea,
+html[data-caret-policy='flutter'] .flt-text-editing {
+  caret-color: transparent;
+}
+html[data-caret-policy='all'] * {
+  caret-color: transparent !important;
+}
+
+/* Telas de baixa densidade: canvas do Flutter nítido (o original aplicava a tudo). */
+@media (max-resolution: 1.2dppx), (-webkit-max-device-pixel-ratio: 1.2) {
+  flutter-view canvas,
+  flt-glass-pane canvas {
+    image-rendering: pixelated;
+  }
+}
+
+/* --- BootScreen ----------------------------------------------------------- */
+
+.gp-boot {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  display: grid;
+  place-items: center;
+  padding: var(--gp-space-4);
+  background-color: var(--gp-bg);
+  color: var(--gp-text);
+  font-family: var(--gp-font);
+  opacity: 1;
+  transition: opacity var(--gp-fade) var(--gp-ease);
+}
+
+.gp-boot[data-state='ready'] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.gp-boot__panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gp-space-3);
+  width: 100%;
+  max-width: var(--gp-card-max);
+  text-align: center;
+}
+
+.gp-boot__brand {
+  margin: 0 0 var(--gp-space-2);
+  font-size: var(--gp-text-brand);
+  font-weight: 700;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.gp-boot__spinner {
+  box-sizing: border-box;
+  width: var(--gp-spinner);
+  height: var(--gp-spinner);
+  border: var(--gp-spinner-stroke) solid var(--gp-accent);
+  border-left-color: transparent;
+  border-radius: 50%;
+  animation: gp-spin var(--gp-spin) linear infinite;
+}
+
+.gp-boot__status,
+.gp-boot__hint {
+  margin: 0;
+  min-height: 1.25em;
+  font-size: var(--gp-text-sm);
+  line-height: 1.45;
+  color: var(--gp-text-muted);
+}
+
+.gp-boot[data-state='error'] .gp-boot__spinner,
+.gp-boot[data-state='error'] .gp-boot__status {
+  display: none;
+}
+
+/* Sem JavaScript: some o indicador (não haveria progresso), fica só o aviso. */
+.no-js .gp-boot__spinner,
+.no-js .gp-boot__status {
+  display: none;
+}
+
+.gp-boot__noscript {
+  margin: 0;
+  font-size: var(--gp-text-base);
+}
+
+/* --- ErrorCard ------------------------------------------------------------ */
+
+.gp-boot__error {
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--gp-space-5);
+  border: 1px solid var(--gp-border);
+  border-radius: var(--gp-radius-md);
+  background-color: var(--gp-surface);
+  box-shadow: var(--gp-shadow-card);
+  text-align: left;
+}
+
+.gp-boot__error[hidden] {
+  display: none;
+}
+
+.gp-boot__error h1 {
+  margin: 0 0 var(--gp-space-2);
+  font-size: var(--gp-text-lg);
+  line-height: 1.3;
+  color: var(--gp-danger);
+}
+
+.gp-boot__error h1:focus {
+  outline: none;
+}
+
+.gp-boot__error p {
+  margin: 0 0 var(--gp-space-4);
+  font-size: var(--gp-text-base);
+  line-height: 1.5;
+}
+
+.gp-boot__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gp-space-2);
+  margin-bottom: var(--gp-space-4);
+}
+
+.gp-boot__error details {
+  font-size: var(--gp-text-sm);
+  color: var(--gp-text-muted);
+}
+
+.gp-boot__error summary {
+  cursor: pointer;
+}
+
+.gp-boot__error summary:focus-visible {
+  outline: 2px solid var(--gp-accent);
+  outline-offset: 2px;
+  border-radius: var(--gp-radius-sm);
+}
+
+.gp-boot__error pre {
+  margin: var(--gp-space-2) 0 0;
+  max-height: 160px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: var(--gp-font);
+  font-size: var(--gp-text-sm);
+}
+
+/* --- Button --------------------------------------------------------------- */
+
+.gp-btn {
+  min-height: 44px;
+  padding: 0 var(--gp-space-4);
+  border-radius: var(--gp-radius-sm);
+  border: 1px solid transparent;
+  font: inherit;
+  font-size: var(--gp-text-base);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.gp-btn:focus-visible {
+  outline: 2px solid var(--gp-accent);
+  outline-offset: 2px;
+}
+
+.gp-btn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.gp-btn--primary {
+  background-color: var(--gp-accent);
+  color: var(--gp-on-accent);
+}
+
+.gp-btn--primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.gp-btn--secondary {
+  background-color: transparent;
+  color: var(--gp-text);
+  border-color: var(--gp-border-input);
+}
+
+.gp-btn--secondary:hover:not(:disabled) {
+  background-color: var(--gp-bg);
+}
+
+/* --- Movimento ------------------------------------------------------------ */
+
+@keyframes gp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes gp-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gp-boot__spinner {
+    animation: gp-pulse 2s ease-in-out infinite;
+  }
+  .gp-boot {
+    transition: none;
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "target": "replica/original/index.html",
+  "captured_at": "2026-10-17",
+  "method": "Painel de navegador embutido (Chromium) + servidor estático replica/tools/serve.mjs em 127.0.0.1:5501; sondas via javascript_exec",
+  "server_log": [
+    "200 GET /",
+    "404 GET /assets/packages/flutter_inappwebview_web/assets/web/web_support.js",
+    "404 GET /flutter_bootstrap.js",
+    "404 GET /favicon.ico"
+  ],
+  "observations": {
+    "visual_after_3s": "Spinner ciano #00bcd4 de 24px centralizado sobre fundo #f2f0f1; nenhum texto, nenhum estado de erro (screenshot: replica/screens/S01-original-loading.jpg)",
+    "loading_element_present": true,
+    "document_fonts": [],
+    "font_request_issued": false,
+    "favicon_href_on_localhost": "http://localhost:5501/favicon.ico",
+    "tab_keydown_defaultPrevented": true,
+    "body_caret_color": "rgba(0, 0, 0, 0)",
+    "html_lang": "",
+    "meta_viewport_present": false,
+    "window_frames_length": 0,
+    "sendToLexical_call": "THROWS: TypeError: Cannot read properties of undefined (reading 'postMessage')"
+  },
+  "favicon_rule_probe": {
+    "rule": "'favicon' + (host.split('.')[1] ? '-' + host.split('.')[1] : '') + '.ico'",
+    "cases": {
+      "localhost:5501": "favicon.ico",
+      "127.0.0.1:5501": "favicon-0.ico",
+      "192.168.0.10": "favicon-168.ico",
+      "gestao.bds.com.br": "favicon-bds.ico",
+      "bds.com.br": "favicon-com.ico",
+      "app.sistemasbds.com.br": "favicon-sistemasbds.ico",
+      "www.prefeitura.ms.gov.br": "favicon-prefeitura.ico"
+    }
+  }
+}

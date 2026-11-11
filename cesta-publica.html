@@ -1,0 +1,1566 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cesta Pública</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+:root {
+  --font: 'Public Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --bg: #eef1f7; --surface: #ffffff; --surface-2: #f6f8fc; --text: #0f1733; --muted: #55607a; --line: #d9dfeb;
+  --brand: #121D59; --brand-contrast: #ffffff; --brand-soft: #e3e8fb; --brand-ink: #121D59; --brand-line: #121D59;
+  --side: #121D59; --link: #2a3aa8; --focus: #d97706;
+  --ok: #0b7a4b; --ok-soft: #dcf3e8; --warn: #9a5b00; --warn-soft: #fdf0d5; --bad: #b4232c; --bad-soft: #fbe1e2;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b0f22; --surface: #131a33; --surface-2: #19213f; --text: #e8ecf8; --muted: #9aa5c4; --line: #2a3358;
+    --brand: #8fa2ff; --brand-contrast: #0b0f22; --brand-soft: #232c5c; --brand-ink: #c9d3ff; --brand-line: #aab8ff;
+    --side: #080c1d; --link: #aab8ff; --focus: #f2b54a;
+    --ok: #4ad295; --ok-soft: #123a2b; --warn: #f2b54a; --warn-soft: #3b2c0e; --bad: #ff7a82; --bad-soft: #40161b;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0b0f22; --surface: #131a33; --surface-2: #19213f; --text: #e8ecf8; --muted: #9aa5c4; --line: #2a3358;
+  --brand: #8fa2ff; --brand-contrast: #0b0f22; --brand-soft: #232c5c; --brand-ink: #c9d3ff; --brand-line: #aab8ff;
+  --side: #080c1d; --link: #aab8ff; --focus: #f2b54a;
+  --ok: #4ad295; --ok-soft: #123a2b; --warn: #f2b54a; --warn-soft: #3b2c0e; --bad: #ff7a82; --bad-soft: #40161b;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 15px/1.5 var(--font); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
+h1, h2, h3 { margin: 0; line-height: 1.25; }
+h1 { font-size: 24px; font-weight: 750; letter-spacing: -0.01em; text-wrap: balance; }
+h2 { font-size: 17px; font-weight: 700; }
+h3 { font-size: 15px; font-weight: 700; }
+p { margin: 0; }
+a { color: var(--link); }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.muted { color: var(--muted); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+svg.i { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Shell */
+.app { display: grid; grid-template-columns: 240px minmax(0, 1fr); min-height: 100vh; }
+.side { background: var(--side); color: #cfd6ff; padding: 20px 14px; display: flex; flex-direction: column; gap: 22px; position: sticky; top: 0; height: 100vh; }
+.brand { display: flex; gap: 10px; align-items: center; color: #fff; font-weight: 800; font-size: 17px; text-decoration: none; padding: 0 6px; letter-spacing: -0.01em; }
+.brand-mark { width: 34px; height: 34px; border-radius: 9px; background: rgba(255,255,255,.12); display: grid; place-items: center; }
+.side nav { display: flex; flex-direction: column; gap: 2px; }
+.side nav a { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; color: #c3cbf5; text-decoration: none; font-weight: 500; white-space: nowrap; }
+.side nav a:hover { background: rgba(255,255,255,.07); color: #fff; }
+.side nav a[aria-current="page"] { background: rgba(255,255,255,.14); color: #fff; }
+.side .foot { margin-top: auto; font-size: 12.5px; color: #9aa6e0; display: grid; gap: 8px; padding: 0 6px; }
+.side .foot a { color: #c3cbf5; }
+.top { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 12px; padding: 10px 28px; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+.top .crumb { font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.searchbtn { display: flex; gap: 8px; align-items: center; height: 36px; padding: 0 8px 0 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); color: var(--muted); cursor: pointer; min-width: 230px; }
+kbd { font: 600 11px var(--font); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; margin-left: auto; background: var(--surface); color: var(--muted); }
+.who { display: flex; align-items: center; gap: 8px; font-size: 13.5px; }
+.who select { height: 36px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 0 8px; max-width: 260px; }
+#view { padding: 28px; max-width: 1320px; outline: none; }
+.savefail { background: var(--bad-soft); color: var(--bad); font-size: 13px; font-weight: 600; padding: 4px 10px; border-radius: 999px; }
+
+/* Blocks */
+.head { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; justify-content: space-between; margin-bottom: 22px; }
+.head .sub { color: var(--muted); margin-bottom: 4px; }
+.head .lead { color: var(--muted); margin-top: 6px; max-width: 70ch; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 36px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font-weight: 600; font-size: 14px; cursor: pointer; text-decoration: none; white-space: nowrap; }
+.btn:hover:not([disabled]) { border-color: var(--brand-line); }
+.btn.primary { background: var(--brand); border-color: var(--brand); color: var(--brand-contrast); }
+.btn.primary:hover:not([disabled]) { filter: brightness(1.15); }
+.btn.danger { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 40%, var(--line)); }
+.btn.sm { height: 30px; padding: 0 10px; font-size: 13px; }
+.btn.link { border: 0; background: none; padding: 0 4px; height: auto; color: var(--link); font-weight: 600; }
+.btn[disabled] { opacity: .45; cursor: not-allowed; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; min-width: 0; }
+.panel > h2 { margin-bottom: 12px; }
+.panel > h2 + .muted { margin: -6px 0 12px; font-size: 14px; }
+.grid { display: grid; gap: 16px; }
+.g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.g3 { grid-template-columns: 1.3fr 1fr; }
+.stack { display: grid; gap: 16px; align-content: start; }
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: 12px; background: var(--surface); margin-bottom: 16px; }
+.kpi { padding: 16px 20px; border-left: 1px solid var(--line); min-width: 0; }
+.kpi:first-child { border-left: 0; }
+.kpi b { display: block; font-size: 26px; font-weight: 750; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; overflow-wrap: anywhere; }
+.kpi span { font-size: 13px; color: var(--muted); }
+table.t { width: 100%; border-collapse: collapse; font-size: 14px; }
+.t th { text-align: left; font-size: 12.5px; font-weight: 600; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.t td { padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.t tbody tr:last-child td { border-bottom: 0; }
+.t .r { text-align: right; }
+.t a { font-weight: 600; text-decoration: none; }
+.t a:hover { text-decoration: underline; }
+.tw { overflow-x: auto; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px; border-radius: 999px; font-size: 12.5px; font-weight: 600; background: var(--surface-2); color: var(--text); border: 1px solid var(--line); white-space: nowrap; }
+.chip.ok { background: var(--ok-soft); color: var(--ok); border-color: transparent; }
+.chip.warn { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+.chip.bad { background: var(--bad-soft); color: var(--bad); border-color: transparent; }
+.chip.info { background: var(--brand-soft); color: var(--brand-ink); border-color: transparent; }
+.empty { padding: 28px 12px; text-align: center; color: var(--muted); }
+.list { list-style: none; margin: 0; padding: 0; }
+.list li { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.list li:last-child { border-bottom: 0; }
+.list .what { min-width: 0; }
+.list .what small { display: block; color: var(--muted); font-size: 12.5px; }
+.alert { border-radius: 10px; padding: 10px 12px; font-size: 14px; border: 1px solid transparent; display: flex; gap: 10px; align-items: flex-start; }
+.alert.warn { background: var(--warn-soft); border-color: color-mix(in srgb, var(--warn) 30%, transparent); }
+.alert.bad { background: var(--bad-soft); border-color: color-mix(in srgb, var(--bad) 30%, transparent); }
+.alert.ok { background: var(--ok-soft); border-color: color-mix(in srgb, var(--ok) 30%, transparent); }
+.alert.info { background: var(--brand-soft); }
+.alert > svg { margin-top: 2px; }
+.alert.warn > svg { color: var(--warn); } .alert.bad > svg { color: var(--bad); } .alert.ok > svg { color: var(--ok); }
+.alerts { display: grid; gap: 6px; }
+.in { height: 36px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 0 10px; width: 100%; min-width: 0; }
+textarea.in { height: auto; min-height: 76px; padding: 8px 10px; resize: vertical; line-height: 1.45; }
+.in:focus { outline: none; border-color: var(--brand-line); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 22%, transparent); }
+.in[aria-invalid="true"] { border-color: var(--bad); }
+label.f { display: grid; gap: 4px; font-size: 13px; font-weight: 600; min-width: 0; }
+label.f small { font-weight: 400; color: var(--muted); }
+.search { max-width: 340px; margin-bottom: 12px; }
+
+/* Cesta */
+.dims { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: 12px; background: var(--surface); margin-bottom: 16px; overflow: hidden; }
+.dim { padding: 12px 16px; border: 0; border-left: 1px solid var(--line); text-align: left; background: none; cursor: pointer; display: grid; gap: 2px; }
+.dim:first-child { border-left: 0; }
+.dim:hover:not([disabled]) { background: var(--surface-2); }
+.dim[disabled] { cursor: default; }
+.dim span { font-size: 12.5px; color: var(--muted); }
+.dim b { font-size: 15px; }
+.dim .track { display: flex; gap: 4px; margin-top: 6px; }
+.dim .track i { height: 4px; flex: 1; border-radius: 2px; background: var(--line); }
+.dim .track i.on { background: var(--brand-line); }
+.meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px 24px; margin: 0 0 16px; }
+.meta dt { font-size: 12.5px; color: var(--muted); }
+.meta dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.lote { margin-top: 24px; }
+.lote-h { display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: space-between; align-items: baseline; margin: 0 0 8px; }
+.items { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.cols { display: grid; grid-template-columns: 32px minmax(0, 1fr) 96px 128px 140px 26px; gap: 12px; align-items: center; padding: 8px 16px; font-size: 12.5px; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--line); }
+details.item { border-top: 1px solid var(--line); }
+.cols + details.item { border-top: 0; }
+details.item > summary { list-style: none; display: grid; grid-template-columns: 32px minmax(0, 1fr) 96px 128px 140px 26px; gap: 12px; align-items: center; padding: 12px 16px; cursor: pointer; }
+details.item > summary::-webkit-details-marker { display: none; }
+details.item > summary:hover { background: var(--surface-2); }
+details.item[open] > summary { background: var(--surface-2); }
+.it-n { color: var(--muted); font-variant-numeric: tabular-nums; }
+.it-d { min-width: 0; }
+.it-d b { font-weight: 600; display: block; }
+.it-d small { color: var(--muted); }
+.it-q { font-size: 13.5px; color: var(--muted); }
+.it-v, .it-t { text-align: right; }
+.it-t { font-weight: 700; }
+.it-f { display: grid; place-items: center; }
+.it-f .ok { color: var(--ok); } .it-f .warn { color: var(--warn); } .it-f .bad { color: var(--bad); }
+.it-body { padding: 8px 16px 20px 60px; display: grid; gap: 16px; background: var(--surface-2); }
+.plot { width: 100%; height: auto; max-width: 760px; display: block; }
+.plot text { fill: var(--muted); font-size: 11px; font-family: var(--font); }
+.plot .est-l { fill: var(--text); font-weight: 700; font-size: 12px; }
+.plot .axis { stroke: var(--line); stroke-width: 1.5; }
+.plot .band { fill: var(--ok); opacity: .13; }
+.plot .band-e { stroke: var(--ok); stroke-width: 1; stroke-dasharray: 3 3; opacity: .7; }
+.plot .est { stroke: var(--brand-line); stroke-width: 2.5; }
+.pt-aceita { fill: var(--ok); stroke: var(--surface-2); stroke-width: 1.5; }
+.pt-inexequivel, .pt-excessivo { fill: var(--surface); stroke: var(--bad); stroke-width: 2; }
+.pt-vencida { fill: var(--surface); stroke: var(--warn); stroke-width: 2; stroke-dasharray: 2 2; }
+.pt-pendente { fill: var(--surface); stroke: var(--warn); stroke-width: 2; }
+.pt-manual { fill: var(--surface); stroke: var(--muted); stroke-width: 2; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12.5px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend svg { width: 12px; height: 12px; }
+.stats { display: flex; flex-wrap: wrap; gap: 6px 22px; font-size: 13.5px; color: var(--muted); }
+.stats b { color: var(--text); font-variant-numeric: tabular-nums; }
+.qtab td.st { white-space: nowrap; }
+.qtab .why { display: block; font-size: 12.5px; color: var(--muted); white-space: normal; max-width: 280px; }
+.qform { display: grid; grid-template-columns: 220px minmax(0, 1.4fr) 120px 150px minmax(0, 1fr) auto; gap: 8px; align-items: end; }
+.qform .btn { height: 36px; }
+.sub-h { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+.row-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.serie td { vertical-align: middle; }
+.serie .in { max-width: 160px; text-align: right; }
+.perm { font-size: 13px; }
+.perm td, .perm th { text-align: center; }
+.perm td:first-child, .perm th:first-child { text-align: left; }
+.yes { color: var(--ok); font-weight: 700; } .no { color: var(--muted); }
+.hash { font-family: ui-monospace, Consolas, monospace; font-size: 12px; overflow-wrap: anywhere; }
+
+/* Dialogs */
+dialog { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--text); padding: 0; width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 40px); box-shadow: 0 24px 60px rgba(5, 10, 30, .35); }
+dialog::backdrop { background: rgba(8, 12, 30, .55); }
+.dlg { display: grid; gap: 16px; padding: 22px; }
+.dlg header p { color: var(--muted); font-size: 14px; margin-top: 6px; white-space: pre-line; }
+.dlg-body { display: grid; gap: 12px; }
+.dlg footer { display: flex; justify-content: flex-end; gap: 8px; }
+.form-err { color: var(--bad); font-size: 14px; font-weight: 600; }
+.form-err:empty { display: none; }
+#cmd { width: min(640px, calc(100vw - 32px)); margin-top: 12vh; }
+#cmd .bar { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+#cmd .bar input { border: 0; background: none; flex: 1; font-size: 16px; outline: none; }
+#cmdList { list-style: none; margin: 0; padding: 6px; max-height: 50vh; overflow: auto; }
+#cmdList button { width: 100%; text-align: left; border: 0; background: none; padding: 9px 12px; border-radius: 8px; cursor: pointer; display: grid; }
+#cmdList button small { color: var(--muted); font-size: 12.5px; }
+#cmdList button[aria-selected="true"] { background: var(--brand-soft); }
+.toasts { position: fixed; right: 16px; bottom: 16px; display: grid; gap: 8px; z-index: 100; }
+.toast { background: var(--text); color: var(--surface); padding: 10px 14px; border-radius: 10px; font-size: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.2); max-width: 380px; }
+.toast.err { background: var(--bad); color: #fff; }
+
+/* Mapa (documento) */
+.doc { background: #fff; color: #161a2b; max-width: 1040px; margin: 0 auto; padding: 48px 56px; border: 1px solid var(--line); border-radius: 6px; font-size: 13px; line-height: 1.5; }
+.doc h1 { color: #161a2b; font-size: 22px; }
+.doc h2 { font-size: 15px; margin: 26px 0 8px; color: #161a2b; }
+.doc .org { font-weight: 700; font-size: 14px; color: #121D59; }
+.doc .minuta { border: 2px dashed #b4232c; color: #b4232c; padding: 8px 12px; font-weight: 700; margin: 16px 0; text-align: center; }
+.doc table { width: 100%; border-collapse: collapse; }
+.doc th, .doc td { border: 1px solid #c9cfdc; padding: 6px 8px; vertical-align: top; text-align: left; }
+.doc th { background: #f1f3f9; font-weight: 700; font-size: 12px; }
+.doc .r { text-align: right; }
+.doc .px { font-size: 12px; line-height: 1.45; }
+.doc .px s { color: #8a3a40; }
+.doc .tot td { font-weight: 700; background: #f7f8fc; }
+.doc .sign { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 56px; text-align: center; font-size: 12px; }
+.doc .sign div { border-top: 1px solid #161a2b; padding-top: 6px; }
+.doc .kv { display: grid; grid-template-columns: 190px 1fr; gap: 4px 16px; margin-top: 16px; }
+.doc .kv dt { color: #4a5068; } .doc .kv dd { margin: 0; font-weight: 600; }
+.doc .ver { margin-top: 32px; font-size: 11px; color: #4a5068; }
+
+@media print {
+  .side, .top, .no-print, .toasts { display: none !important; }
+  .app { display: block; }
+  body { background: #fff; }
+  #view { padding: 0; max-width: none; }
+  .doc { border: 0; padding: 0; max-width: none; }
+  .doc tr { break-inside: avoid; }
+}
+@media (max-width: 1240px) {
+  .searchbtn { min-width: 0; }
+  .searchbtn .lbl, .searchbtn kbd, .who .lbl { display: none; }
+}
+@media (max-width: 1080px) {
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .kpi:nth-child(3) { border-left: 0; }
+  .kpi:nth-child(n+3) { border-top: 1px solid var(--line); }
+  .g2, .g3 { grid-template-columns: minmax(0, 1fr); }
+  .dims { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dim:nth-child(3) { border-left: 0; }
+  .dim:nth-child(n+3) { border-top: 1px solid var(--line); }
+  .qform { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 860px) {
+  .app { grid-template-columns: minmax(0, 1fr); }
+  .side { position: static; height: auto; flex-direction: row; align-items: center; overflow-x: auto; padding: 10px 16px; gap: 14px; }
+  .side nav { flex-direction: row; }
+  .side .foot, .brand .bn { display: none; }
+  .top { padding: 10px 16px; }
+  .top .crumb { display: none; }
+  .kpi { padding: 14px 16px; }
+  .kpis { grid-template-columns: minmax(0, 1fr); }
+  .kpi, .kpi:nth-child(3) { border-left: 0; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 12px 16px; }
+  .kpi:first-child { border-top: 0; }
+  .kpi b { font-size: 20px; overflow-wrap: normal; }
+  .who { flex: 1; min-width: 0; }
+  .who select { width: 100%; max-width: none; }
+  #view { padding: 18px 16px; }
+  .cols { display: none; }
+  details.item > summary { grid-template-columns: 22px minmax(0, 1fr) auto 22px; padding: 12px; }
+  .it-q, .it-v { display: none; }
+  .it-body { padding: 8px 12px 16px; }
+  .qform { grid-template-columns: minmax(0, 1fr); }
+  .doc { padding: 24px 18px; }
+  .doc .kv { grid-template-columns: 1fr; }
+  .doc .sign { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .it-body { animation: drop .18s ease-out; }
+  @keyframes drop { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <a class="brand" href="#/painel" aria-label="Cesta Pública, painel">
+      <span class="brand-mark" aria-hidden="true"><svg class="i" viewBox="0 0 24 24" style="stroke:#fff"><path d="M4 9h16l-1.6 9.2A2 2 0 0 1 16.4 20H7.6a2 2 0 0 1-2-1.8L4 9z"/><path d="M9 9l3-5 3 5"/><path d="M9 13v3M12 13v3M15 13v3"/></svg></span>
+      <span class="bn">Cesta Pública</span>
+    </a>
+    <nav id="nav" aria-label="Seções do sistema"></nav>
+    <div class="foot">
+      <span>Dados salvos neste navegador. Faça backup em Configurações.</span>
+      <a href="cesta-publica-site.html">Página de apresentação</a>
+    </div>
+  </aside>
+  <div class="main">
+    <header class="top">
+      <span class="crumb" id="crumb"></span>
+      <span id="saveState"></span>
+      <button class="searchbtn" type="button" data-act="palette" aria-label="Buscar (Ctrl+K)">
+        <svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <span class="lbl">Buscar cesta, item, fornecedor</span><kbd>Ctrl K</kbd>
+      </button>
+      <label class="who"><span class="lbl">Atuando como</span><select id="who" data-bind="who" aria-label="Usuário atual"></select></label>
+      <button class="btn" type="button" data-act="theme" aria-label="Alternar tema claro ou escuro" style="width:36px;padding:0">
+        <svg class="i" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      </button>
+    </header>
+    <main id="view" tabindex="-1"></main>
+  </div>
+</div>
+
+<dialog id="dlg"></dialog>
+<dialog id="cmd" aria-label="Busca rápida">
+  <div class="bar">
+    <svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    <input id="cmdIn" type="search" role="combobox" aria-expanded="true" aria-autocomplete="list" placeholder="Digite para buscar…" aria-label="Buscar" autocomplete="off" aria-controls="cmdList">
+    <kbd>Esc</kbd>
+  </div>
+  <ul id="cmdList" role="listbox" aria-label="Resultados"></ul>
+</dialog>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<input type="file" id="restoreFile" accept="application/json,.json" hidden data-bind="restore">
+
+<script>
+"use strict";
+/* ============ Utilitários ============ */
+const LS_KEY = "cesta-publica:v1";
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-5);
+// Até 4 casas: combustíveis (ANP) são cotados com 3.
+const BRL = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2, maximumFractionDigits: 4 });
+const brl = v => v == null || !isFinite(v) ? "—" : BRL.format(v);
+const int = v => new Intl.NumberFormat("pt-BR").format(v);
+const pct = v => new Intl.NumberFormat("pt-BR", { style: "percent", maximumFractionDigits: 1 }).format(v);
+// Arredondamento comercial em notação decimal (evita 10.075 → 10,07 do ponto flutuante).
+const roundN = (v, n) => Number(Math.round(Number(Number(v).toPrecision(15) + "e" + n)) + "e-" + n);
+const round2 = v => roundN(v, 2);
+const norm = s => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+function today() { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); }
+function addDays(iso, n) { const d = new Date(iso + "T12:00:00"); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
+function addMonths(iso, n) { const d = new Date(iso + "T12:00:00"), day = d.getDate(); d.setMonth(d.getMonth() + n); if (d.getDate() !== day) d.setDate(0); return d.toISOString().slice(0, 10); }
+const isDate = s => /^\d{4}-\d{2}-\d{2}$/.test(s || "") && !isNaN(Date.parse(s + "T12:00:00"));
+const daysBetween = (a, b) => Math.round((Date.parse(b + "T12:00:00") - Date.parse(a + "T12:00:00")) / 864e5);
+const fdate = iso => iso ? new Date(iso + "T12:00:00").toLocaleDateString("pt-BR") : "—";
+const fdt = iso => new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+const csvNum = v => v == null ? "" : v.toFixed(2).replace(".", ",");
+// Prefixo ' impede que o Excel execute fórmulas vindas de texto digitado (=, +, -, @).
+const csvCell = v => { let s = String(v ?? ""); if (/^[=+\-@\t\r]/.test(s)) s = "'" + s; return '"' + s.replace(/"/g, '""') + '"'; };
+
+// Aceita "1.234,56", "1234,56", "1234.56" e "1,234.56". Rejeita "6.459" (ponto + 3 dígitos é ambíguo: milhar ou decimal).
+function parseMoney(s) {
+  s = String(s ?? "").trim().replace(/R\$|\s/g, "");
+  if (!s) return NaN;
+  const c = s.lastIndexOf(","), p = s.lastIndexOf(".");
+  if (c >= 0 && p > c) s = s.replace(/,/g, "");
+  else if (c >= 0) s = s.replace(/\./g, "").replace(",", ".");
+  else if (/^\d{1,3}(\.\d{3})+$/.test(s)) return NaN;
+  return /^\d+(\.\d+)?$/.test(s) ? Number(s) : NaN;
+}
+const money = s => { const v = parseMoney(s); return isFinite(v) ? roundN(v, 4) : NaN; };
+// Em quantidades, "1.200" é milhar.
+const parseQty = s => { const t = String(s ?? "").trim(); return /^\d{1,3}(\.\d{3})+$/.test(t) ? Number(t.replace(/\./g, "")) : parseMoney(t); };
+
+// CNPJ numérico e alfanumérico (IN RFB 2.229/2024): valor de cada caractere = código ASCII − 48.
+function cnpjDV(base) {
+  const val = c => c.charCodeAt(0) - 48;
+  const dv = s => { const w = s.length === 12 ? [5,4,3,2,9,8,7,6,5,4,3,2] : [6,5,4,3,2,9,8,7,6,5,4,3,2]; let t = 0; for (let i = 0; i < s.length; i++) t += val(s[i]) * w[i]; const r = t % 11; return r < 2 ? 0 : 11 - r; };
+  const d1 = dv(base); return "" + d1 + dv(base + d1);
+}
+const cnpjClean = v => String(v || "").toUpperCase().replace(/[^0-9A-Z]/g, "");
+function cnpjValido(v) {
+  const s = cnpjClean(v);
+  if (!/^[0-9A-Z]{12}\d{2}$/.test(s) || /^(\d)\1{13}$/.test(s)) return false;
+  return cnpjDV(s.slice(0, 12)) === s.slice(12);
+}
+const fmtCnpj = v => { const s = cnpjClean(v); return s.length === 14 ? s.replace(/^(..)(...)(...)(....)(..)$/, "$1.$2.$3/$4-$5") : (v || ""); };
+
+// SHA-256 síncrono (FIPS 180-4): sela a trilha de auditoria e o mapa publicado.
+const SHA_K = [], SHA_H = [];
+(function () {
+  const frac = x => ((x - Math.floor(x)) * 4294967296) | 0;
+  for (let n = 2, c = 0; c < 64; n++) {
+    let p = true; for (let f = 2; f * f <= n; f++) if (n % f === 0) { p = false; break; }
+    if (p) { if (c < 8) SHA_H[c] = frac(Math.sqrt(n)); SHA_K[c] = frac(Math.cbrt(n)); c++; }
+  }
+})();
+function sha256(str) {
+  const bytes = new TextEncoder().encode(str), l = bytes.length, len = ((l + 9 + 63) >> 6) << 6;
+  const buf = new Uint8Array(len); buf.set(bytes); buf[l] = 0x80;
+  const dv = new DataView(buf.buffer);
+  dv.setUint32(len - 8, Math.floor(l / 536870912)); dv.setUint32(len - 4, (l * 8) >>> 0);
+  const H = SHA_H.slice(), W = new Int32Array(64);
+  for (let o = 0; o < len; o += 64) {
+    for (let i = 0; i < 16; i++) W[i] = dv.getInt32(o + i * 4);
+    for (let i = 16; i < 64; i++) {
+      const a = W[i - 15], b = W[i - 2];
+      const s0 = (a >>> 7 | a << 25) ^ (a >>> 18 | a << 14) ^ (a >>> 3);
+      const s1 = (b >>> 17 | b << 15) ^ (b >>> 19 | b << 13) ^ (b >>> 10);
+      W[i] = (W[i - 16] + s0 + W[i - 7] + s1) | 0;
+    }
+    let [a, b, c, d, e, f, g, h] = H;
+    for (let i = 0; i < 64; i++) {
+      const S1 = (e >>> 6 | e << 26) ^ (e >>> 11 | e << 21) ^ (e >>> 25 | e << 7);
+      const t1 = (h + S1 + ((e & f) ^ (~e & g)) + SHA_K[i] + W[i]) | 0;
+      const S0 = (a >>> 2 | a << 30) ^ (a >>> 13 | a << 19) ^ (a >>> 22 | a << 10);
+      const t2 = (S0 + ((a & b) ^ (a & c) ^ (b & c))) | 0;
+      h = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b; b = a; a = (t1 + t2) | 0;
+    }
+    H[0] = (H[0] + a) | 0; H[1] = (H[1] + b) | 0; H[2] = (H[2] + c) | 0; H[3] = (H[3] + d) | 0;
+    H[4] = (H[4] + e) | 0; H[5] = (H[5] + f) | 0; H[6] = (H[6] + g) | 0; H[7] = (H[7] + h) | 0;
+  }
+  return H.map(x => (x >>> 0).toString(16).padStart(8, "0")).join("");
+}
+
+const ICONS = {
+  painel: '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
+  cestas: '<path d="M4 9h16l-1.6 9.2A2 2 0 0 1 16.4 20H7.6a2 2 0 0 1-2-1.8L4 9z"/><path d="M9 9l3-5 3 5"/>',
+  fornecedores: '<path d="M3 21h18M5 21V8l7-4 7 4v13"/><path d="M9 21v-5h6v5M9 11h.01M15 11h.01"/>',
+  auditoria: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/>',
+  config: '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
+  ok: '<circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/>',
+  warn: '<path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
+  bad: '<circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/>',
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  doc: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/>',
+  down: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
+  print: '<path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>'
+};
+const ic = (n, cls = "") => `<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n] || ""}</svg>`;
+
+/* ============ Regras de negócio ============ */
+// Prazo em meses antes da data-base (IN 65/2021, art. 5º).
+const FONTES = {
+  I:   { nome: "Sistemas oficiais de preços", meses: null },
+  II:  { nome: "Contratações similares de outros entes", meses: 12 },
+  III: { nome: "Mídia especializada e sites", meses: 6 },
+  IV:  { nome: "Pesquisa direta com fornecedores", meses: 6 },
+  V:   { nome: "Notas fiscais eletrônicas", meses: 12 }
+};
+const METODOS = { media: "Média aritmética", mediana: "Mediana", menor: "Menor preço" };
+const CRITERIOS = { mediana: "Faixa em torno da mediana", dp: "Média ± desvio-padrão", nenhum: "Sem saneamento automático" };
+const NIVEIS = ["", "Aprendiz", "Normal", "Intermediário", "Avançado", "Expert"];
+const DIMS = {
+  interna:   { nome: "Situação interna", estados: ["Rascunho", "Em coleta", "Consolidada", "Publicada"] },
+  cliente:   { nome: "Situação do cliente", estados: ["Solicitada", "Em validação", "Aceita"] },
+  documento: { nome: "Documento prévio", estados: ["Minuta", "Revisado", "Publicado"] },
+  posse:     { nome: "Posse da cesta", estados: ["Pesquisador", "Revisor", "Autoridade"] }
+};
+const ORIGENS_OFICIAIS = ["Painel de Preços (Gov.br)", "Banco de Preços em Saúde (BPS)", "SINAPI", "SICRO", "ANP: levantamento de preços de combustíveis", "CONAB: preços agropecuários", "CEASA: cotação diária", "CISCOPAR: tabela de referência"];
+
+// Alçadas: nível mínimo de cada ação.
+const ALCADA = { lancar: 1, criarCesta: 2, editarItens: 2, fornecedor: 2, revisar: 3, consolidar: 3, metodo: 3, aprovar: 4, excluirCesta: 4, publicar: 5, reabrir: 5, usuarios: 5 };
+const ALCADA_ROT = { lancar: "Lançar cotações", criarCesta: "Criar cestas e itens", editarItens: "Editar itens", fornecedor: "Cadastrar fornecedores", revisar: "Revisar e desconsiderar cotações", consolidar: "Consolidar a cesta", metodo: "Definir método de cálculo", aprovar: "Aprovar valores", excluirCesta: "Excluir cesta", publicar: "Publicar o mapa", reabrir: "Reabrir cesta publicada", usuarios: "Gerir usuários e alçadas" };
+
+function stats(vals) {
+  const n = vals.length; if (!n) return { n: 0 };
+  const s = [...vals].sort((a, b) => a - b);
+  const mean = vals.reduce((a, b) => a + b, 0) / n;
+  const med = n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2;
+  const sd = n > 1 ? Math.sqrt(vals.reduce((a, v) => a + (v - mean) ** 2, 0) / (n - 1)) : 0;
+  return { n, mean, med, sd, min: s[0], max: s[n - 1], cv: mean ? sd / mean : 0 };
+}
+
+// Núcleo do cálculo: classifica cada cotação e apura o valor estimado do item.
+function calcItem(item, cesta) {
+  const cfg = cesta.calc;
+  const rows = item.cotacoes.map(q => ({ q, estado: null, motivo: "" }));
+  for (const r of rows) {
+    const f = FONTES[r.q.fonte];
+    if (r.q.exclusao) { r.estado = "manual"; r.motivo = r.q.exclusao; }
+    else if (r.q.status !== "aprovada") { r.estado = "pendente"; r.motivo = "Lançada por nível inicial, aguarda revisão."; }
+    else if (!isDate(r.q.data)) { r.estado = "manual"; r.motivo = "Data da cotação ausente ou inválida."; }
+    else if (f && f.meses && isDate(cesta.dataBase) && r.q.data < addMonths(cesta.dataBase, -f.meses)) {
+      r.estado = "vencida"; r.motivo = `Anterior a ${fdate(addMonths(cesta.dataBase, -f.meses))}: o inciso ${r.q.fonte} aceita até ${f.meses} meses antes da data-base.`;
+    }
+  }
+  const base = rows.filter(r => !r.estado);
+  const st0 = stats(base.map(r => r.q.valor));
+  let lo = -Infinity, hi = Infinity;
+  if (st0.n >= 3 && cfg.criterio !== "nenhum") {
+    if (cfg.criterio === "mediana") { lo = st0.med * cfg.inf / 100; hi = st0.med * cfg.sup / 100; }
+    else { lo = st0.mean - cfg.k * st0.sd; hi = st0.mean + cfg.k * st0.sd; }
+    for (const r of base) {
+      if (r.q.valor < lo - 1e-9) { r.estado = "inexequivel"; r.motivo = `Abaixo do limite inferior de ${brl(lo)}: indício de preço inexequível.`; }
+      else if (r.q.valor > hi + 1e-9) { r.estado = "excessivo"; r.motivo = `Acima do limite superior de ${brl(hi)}: preço excessivamente elevado.`; }
+    }
+  }
+  rows.forEach(r => { if (!r.estado) r.estado = "aceita"; });
+  const aceitas = rows.filter(r => r.estado === "aceita");
+  const st = stats(aceitas.map(r => r.q.valor));
+  const estimado = st.n ? round2(cfg.metodo === "media" ? st.mean : cfg.metodo === "menor" ? st.min : st.med) : null;
+  const total = estimado == null ? null : round2(estimado * item.quantidade);
+  const just = (item.justificativa || "").trim();
+  const conta = e => rows.filter(r => r.estado === e).length;
+  const alertas = [];
+  if (!st.n) alertas.push({ t: "bad", m: "Sem preço válido: o item ainda não tem valor estimado." });
+  else if (st.n < 3 && !just) alertas.push({ t: "bad", m: `Apenas ${st.n} preço${st.n > 1 ? "s" : ""} válido${st.n > 1 ? "s" : ""}. A IN SEGES/ME nº 65/2021 (art. 6º) pede 3 ou mais; registre a justificativa para seguir com menos.` });
+  else if (st.n < 3) alertas.push({ t: "warn", m: `Estimativa com ${st.n} preço${st.n > 1 ? "s" : ""}, amparada na justificativa registrada.` });
+  if (conta("pendente")) alertas.push({ t: "warn", m: `${conta("pendente")} cotação(ões) aguardando revisão de nível superior; fora do cálculo até a aprovação.` });
+  if (conta("vencida")) alertas.push({ t: "warn", m: `${conta("vencida")} cotação(ões) fora do prazo do art. 5º da IN 65/2021; desconsideradas.` });
+  if (st.n >= 2 && st.cv > 0.25 && cfg.metodo === "media") alertas.push({ t: "warn", m: `Coeficiente de variação de ${pct(st.cv)}: a dispersão é alta e a média fica sensível; avalie usar a mediana.` });
+  if (st.n && !aceitas.some(r => r.q.fonte === "I" || r.q.fonte === "II") && !just) alertas.push({ t: "warn", m: "Nenhum preço dos incisos I ou II. O art. 5º, §1º, da IN 65/2021 manda priorizá-los; registre a justificativa." });
+  const bloqueia = alertas.some(a => a.t === "bad") || conta("pendente") > 0;
+  return { rows, lo, hi, st, st0, estimado, total, alertas, bloqueia, conta };
+}
+
+function calcCesta(c) {
+  const itens = c.itens.map(it => ({ it, r: calcItem(it, c) }));
+  const total = round2(itens.reduce((a, x) => a + (x.r.total || 0), 0));
+  return { itens, total, bloqueios: itens.filter(x => x.r.bloqueia) };
+}
+
+function mapaHash(c) {
+  const data = calcCesta(c).itens.map(({ it, r }) => [it.lote, it.codigo, it.descricao, it.unidade, it.quantidade, r.estimado, r.total,
+    r.rows.map(x => [x.q.fonte, x.q.origem, x.q.data, x.q.valor, x.estado])]);
+  return sha256(JSON.stringify([c.numero, c.processo, c.objeto, c.unidade, c.dataBase, c.calc, data]));
+}
+
+/* ============ Estado e trilha de auditoria ============ */
+let S, saveFail = false;
+const UI = { open: new Set(), focusItem: null, cestasQ: "", auditQ: "", pal: 0, palItems: [] };
+
+function appendLog(D, user, acao, alvo, detalhe, ts) {
+  const prev = D.audit.length ? D.audit[D.audit.length - 1].hash : "0".repeat(64);
+  const e = { seq: D.audit.length + 1, ts: ts || new Date().toISOString(), user: user.nome, nivel: user.nivel, acao, alvo, detalhe: detalhe || "", prev };
+  e.hash = sha256(JSON.stringify([e.seq, e.ts, e.user, e.nivel, e.acao, e.alvo, e.detalhe, e.prev]));
+  D.audit.push(e);
+}
+const log = (acao, alvo, detalhe) => appendLog(S, cur(), acao, alvo, detalhe);
+function verifyChain(D = S) {
+  let prev = "0".repeat(64);
+  for (const e of D.audit) {
+    const h = sha256(JSON.stringify([e.seq, e.ts, e.user, e.nivel, e.acao, e.alvo, e.detalhe, e.prev]));
+    if (e.prev !== prev || h !== e.hash) return { ok: false, at: e.seq, n: D.audit.length };
+    prev = e.hash;
+  }
+  return { ok: true, n: D.audit.length };
+}
+
+function save() {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(S)); saveFail = false; }
+  catch (e) { saveFail = true; }
+}
+function load() {
+  try { const raw = localStorage.getItem(LS_KEY); if (raw) { const d = JSON.parse(raw); if (d && d.v === 1 && Array.isArray(d.cestas)) return d; } }
+  catch (e) { /* armazenamento indisponível: usa dados de exemplo em memória */ }
+  return seed();
+}
+const cur = () => S.users.find(u => u.id === S.currentUserId) || S.users[0];
+const can = acao => cur().nivel >= ALCADA[acao];
+const getC = id => S.cestas.find(c => c.id === id);
+const getI = (c, id) => c && c.itens.find(i => i.id === id);
+const getQ = (it, id) => it && it.cotacoes.find(q => q.id === id);
+const locked = c => !!c.publicacao;
+// Segregação compara ids; o nome só serve para dados antigos sem id.
+const mine = (rec, idKey, nameKey) => rec[idKey] ? rec[idKey] === cur().id : rec[nameKey] === cur().nome;
+const isMine = q => mine(q, "lancadoPorId", "lancadoPor");
+
+function seed() {
+  const t = today();
+  const users = [
+    { id: "u1", nome: "Leandro Santos", nivel: 5 },
+    { id: "u2", nome: "Carla Duarte", nivel: 4 },
+    { id: "u3", nome: "Paulo Reis", nivel: 3 },
+    { id: "u4", nome: "Rita Moraes", nivel: 2 },
+    { id: "u5", nome: "Marina Alves", nivel: 1 }
+  ];
+  const U = id => users.find(u => u.id === id);
+  const cn = b => b + cnpjDV(b);
+  const forn = [
+    { id: "f1", nome: "Hortifrúti Vale Verde Ltda", cnpj: cn("123456780001"), email: "vendas@valeverde.example", telefone: "(67) 3438-1100", cidade: "Ponta Porã/MS" },
+    { id: "f2", nome: "Comercial Pantanal Alimentos", cnpj: cn("234567890001"), email: "cotacao@pantanal.example", telefone: "(67) 3421-2200", cidade: "Dourados/MS" },
+    { id: "f3", nome: "Distribuidora Fronteira", cnpj: cn("345678900001"), email: "licitacoes@fronteira.example", telefone: "(67) 3431-5400", cidade: "Ponta Porã/MS" },
+    { id: "f4", nome: "Auto Posto Rota 384", cnpj: cn("456789010001"), email: "posto384@rota.example", telefone: "(67) 3435-0384", cidade: "Antônio João/MS" },
+    { id: "f5", nome: "Rede Sul Combustíveis", cnpj: cn("1A2B3C4D0001"), email: "governo@redesul.example", telefone: "(67) 3029-7700", cidade: "Campo Grande/MS" }
+  ];
+  const D = { v: 1, config: { orgao: "", tema: "auto" }, users, currentUserId: "u1", fornecedores: forn, cestas: [], audit: [] };
+  const at = (dias, h = 10) => { const d = new Date(addDays(t, dias) + "T00:00:00"); d.setHours(h, 7 + ((dias * 13) % 50)); return d.toISOString(); };
+  forn.forEach(f => appendLog(D, U("u4"), "Fornecedor cadastrado", f.nome, "CNPJ " + fmtCnpj(f.cnpj), at(-60, 9)));
+  const Q = (fonte, origem, valor, dias, user = "u3", fid = null, extra = {}) => {
+    const u = U(user), aprovada = u.nivel >= 3 || !!extra.aprovadoPor;
+    return { id: uid(), fonte, origem, fornecedorId: fid, valor, data: addDays(t, -dias), ref: extra.ref || "", lancadoPor: u.nome, lancadoPorId: u.id, lancadoEm: at(-Math.max(1, dias - 1), 14), status: aprovada ? "aprovada" : "pendente", aprovadoPor: extra.aprovadoPor || (aprovada ? u.nome : null), exclusao: null };
+  };
+  const I = (lote, codigo, descricao, unidade, quantidade, cotacoes, justificativa = "") => ({ id: uid(), lote, codigo, descricao, unidade, quantidade, justificativa, cotacoes });
+
+  const c1 = {
+    id: uid(), numero: "CP-2026/014", processo: "PA 112/2026", objeto: "Gêneros alimentícios para a merenda escolar, 2º semestre",
+    unidade: "Secretaria Municipal de Educação", dataBase: addDays(t, 20), responsavel: "Paulo Reis", criadoEm: at(-45, 9),
+    calc: { metodo: "media", criterio: "mediana", k: 1, inf: 70, sup: 130 },
+    sit: { interna: "Em coleta", cliente: "Em validação", documento: "Minuta", posse: "Pesquisador" }, aprovacao: null, publicacao: null,
+    itens: [
+      I("Lote 1: Hortifrúti", "463428", "Banana prata, de primeira, em pencas", "kg", 1200, [
+        Q("IV", forn[0].nome, 6.2, 12, "u3", "f1", { ref: "Ofício 87/2026" }), Q("IV", forn[1].nome, 5.9, 11, "u3", "f2"), Q("IV", forn[2].nome, 6.45, 10, "u3", "f3"),
+        Q("II", "Prefeitura de Ponta Porã: ARP 08/2026", 5.75, 70, "u3"), Q("I", "Painel de Preços (Gov.br)", 6.1, 6, "u3")]),
+      I("Lote 1: Hortifrúti", "463436", "Tomate tipo salada, longa vida, graúdo", "kg", 900, [
+        Q("IV", forn[0].nome, 7.8, 12, "u3", "f1"), Q("IV", forn[1].nome, 8.1, 11, "u3", "f2"), Q("IV", forn[2].nome, 7.95, 10, "u3", "f3"),
+        Q("III", "CEASA: cotação diária", 15.9, 8, "u3", null, { ref: "Acesso em " + fdate(addDays(t, -8)) + " às 09h12" }), Q("II", "Prefeitura de Bela Vista: Contrato 31/2026", 7.6, 95, "u3")]),
+      I("Lote 2: Mercearia", "448734", "Arroz agulhinha tipo 1, pacote de 5 kg", "pct", 600, [
+        Q("IV", forn[1].nome, 27.9, 15, "u3", "f2"), Q("IV", forn[2].nome, 29.5, 14, "u3", "f3"), Q("II", "Consórcio CISCOPAR: Ata 12/2026", 26.8, 120, "u3"),
+        Q("I", "Painel de Preços (Gov.br)", 28.4, 9, "u3"), Q("IV", "Supermercado Central", 31, 3, "u5")]),
+      I("Lote 2: Mercearia", "448712", "Feijão carioca tipo 1, pacote de 1 kg", "pct", 800, [
+        Q("IV", forn[1].nome, 8.49, 15, "u3", "f2"), Q("IV", forn[2].nome, 8.99, 14, "u3", "f3")]),
+      I("Lote 2: Mercearia", "448790", "Óleo de soja refinado, frasco de 900 ml", "un", 400, [
+        Q("IV", forn[1].nome, 7.29, 15, "u3", "f2"), Q("IV", forn[2].nome, 7.65, 14, "u3", "f3"), Q("I", "Painel de Preços (Gov.br)", 7.1, 7, "u3"),
+        Q("III", "Portal de ofertas de atacado", 6.2, 230, "u4", null, { aprovadoPor: "Paulo Reis" })])
+    ]
+  };
+  const c2 = {
+    id: uid(), numero: "CP-2026/015", processo: "PA 118/2026", objeto: "Combustíveis para a frota municipal",
+    unidade: "Secretaria Municipal de Administração", dataBase: addDays(t, 12), responsavel: "Paulo Reis", criadoEm: at(-30, 9),
+    calc: { metodo: "mediana", criterio: "mediana", k: 1, inf: 70, sup: 130 },
+    sit: { interna: "Consolidada", cliente: "Aceita", documento: "Revisado", posse: "Autoridade" }, aprovacao: null, publicacao: null,
+    itens: [
+      I("Lote único", "386260", "Gasolina comum", "L", 30000, [
+        Q("I", "ANP: levantamento de preços de combustíveis", 6.29, 9), Q("IV", forn[3].nome, 6.39, 7, "u3", "f4"), Q("IV", forn[4].nome, 6.45, 7, "u3", "f5"), Q("II", "Prefeitura de Caracol: Contrato 07/2026", 6.35, 80)]),
+      I("Lote único", "386262", "Óleo diesel S10", "L", 45000, [
+        Q("I", "ANP: levantamento de preços de combustíveis", 6.05, 9), Q("IV", forn[3].nome, 6.19, 7, "u3", "f4"), Q("IV", forn[4].nome, 6.12, 7, "u3", "f5"), Q("IV", "Posto Avenida", 3.1, 6, "u3")])
+    ]
+  };
+  D.cestas.push(c1, c2);
+  [c1, c2].forEach((c, k) => {
+    appendLog(D, U("u4"), "Cesta criada", c.numero, c.objeto, c.criadoEm);
+    c.itens.forEach(it => appendLog(D, U("u4"), "Item incluído", c.numero, it.descricao, at(-40 + k * 10, 10)));
+  });
+  [...c1.itens, ...c2.itens].flatMap(it => it.cotacoes.map(q => [it, q])).sort((a, b) => a[1].lancadoEm.localeCompare(b[1].lancadoEm))
+    .forEach(([it, q]) => appendLog(D, users.find(u => u.nome === q.lancadoPor), "Cotação lançada", it.descricao, `${brl(q.valor)}, inciso ${q.fonte}, ${q.origem}`, q.lancadoEm));
+  appendLog(D, U("u3"), "Situação alterada", c2.numero, "Situação interna: Em coleta para Consolidada. Justificativa: quatro fontes por item, todas válidas.", at(-2, 16));
+  appendLog(D, U("u2"), "Valores aprovados", c2.numero, "Total estimado " + brl(calcCesta(c2).total), at(-1, 11));
+  c2.aprovacao = { user: "Carla Duarte", userId: "u2", ts: D.audit[D.audit.length - 1].ts };
+  return D;
+}
+
+/* ============ Componentes ============ */
+function toast(msg, type) {
+  const el = document.createElement("div");
+  el.className = "toast" + (type === "err" ? " err" : "");
+  el.setAttribute("role", type === "err" ? "alert" : "status");
+  el.textContent = msg;
+  $("#toasts").appendChild(el);
+  setTimeout(() => el.remove(), type === "err" ? 6000 : 3200);
+}
+function deny(acao) { toast(`${ALCADA_ROT[acao]} exige nível ${ALCADA[acao]} (${NIVEIS[ALCADA[acao]]}). Você está como ${NIVEIS[cur().nivel]}.`, "err"); }
+function need(acao) { if (can(acao)) return true; deny(acao); return false; }
+
+// Botão sujeito a alçada: aparece desabilitado e explica o nível exigido.
+function abtn(acao, act, label, data = "", cls = "") {
+  const ok = can(acao);
+  return `<button type="button" class="btn ${cls}" data-act="${act}" ${data} ${ok ? "" : `disabled title="Requer nível ${ALCADA[acao]} (${NIVEIS[ALCADA[acao]]})"`}>${label}</button>`;
+}
+
+function fieldHtml(f) {
+  const id = "f_" + f.name, req = f.required ? " required" : "";
+  const help = f.help ? `<small>${esc(f.help)}</small>` : "";
+  let ctl;
+  if (f.type === "select") ctl = `<select class="in" id="${id}" name="${f.name}"${req}>${f.options.map(o => { const [v, l] = Array.isArray(o) ? o : [o, o]; return `<option value="${esc(v)}" ${String(v) === String(f.value) ? "selected" : ""}>${esc(l)}</option>`; }).join("")}</select>`;
+  else if (f.type === "textarea") ctl = `<textarea class="in" id="${id}" name="${f.name}" rows="${f.rows || 3}"${req} placeholder="${esc(f.placeholder || "")}">${esc(f.value || "")}</textarea>`;
+  else ctl = `<input class="in" id="${id}" name="${f.name}" type="${f.type || "text"}" value="${esc(f.value ?? "")}"${req} ${f.inputmode ? `inputmode="${f.inputmode}"` : ""} placeholder="${esc(f.placeholder || "")}" autocomplete="off">`;
+  return `<label class="f" for="${id}">${esc(f.label)}${f.required ? "" : ' <small>(opcional)</small>'}${ctl}${help}</label>`;
+}
+function openForm({ title, desc, fields = [], submit = "Salvar", danger = false, onSubmit }) {
+  const d = $("#dlg");
+  // A tela é redesenhada antes do close(): devolve o foco ao botão equivalente na tela nova.
+  const op = document.activeElement, opSel = op && op.dataset && op.dataset.act
+    ? `[data-act="${op.dataset.act}"]` + ["c", "i", "q", "f", "u"].filter(k => op.dataset[k]).map(k => `[data-${k}="${op.dataset[k]}"]`).join("") : null;
+  d.onclose = () => { if (op && op.isConnected) return op.focus(); const alt = opSel && document.querySelector(opSel); (alt && !alt.disabled ? alt : $("#view")).focus({ preventScroll: true }); };
+  d.setAttribute("aria-labelledby", "dlgT");
+  d.innerHTML = `<form class="dlg" novalidate>
+    <header><h2 id="dlgT">${esc(title)}</h2>${desc ? `<p>${esc(desc)}</p>` : ""}</header>
+    ${fields.length ? `<div class="dlg-body">${fields.map(fieldHtml).join("")}</div>` : ""}
+    <p class="form-err" role="alert"></p>
+    <footer><button type="button" class="btn" data-x>Cancelar</button><button type="submit" class="btn ${danger ? "danger" : "primary"}">${esc(submit)}</button></footer>
+  </form>`;
+  const form = d.querySelector("form"), err = d.querySelector(".form-err");
+  d.querySelector("[data-x]").onclick = () => d.close();
+  form.onsubmit = e => {
+    e.preventDefault(); err.textContent = "";
+    const v = {};
+    for (const f of fields) {
+      const el = form.elements[f.name]; v[f.name] = el.value.trim(); el.removeAttribute("aria-invalid");
+      if (f.required && !v[f.name]) { el.setAttribute("aria-invalid", "true"); err.textContent = `Preencha o campo "${f.label}".`; el.focus(); return; }
+    }
+    const r = onSubmit(v, form);
+    if (typeof r === "string") { err.textContent = r; return; }
+    if (d.open) d.close();
+  };
+  d.showModal();
+  const first = form.querySelector("input,select,textarea") || form.querySelector('button[type="submit"]'); if (first) first.focus();
+}
+const justField = (label = "Justificativa") => ({ name: "just", label, type: "textarea", required: true, rows: 3, help: "Fica registrada na trilha de auditoria." });
+
+function commit(msg) { save(); render(); if (msg) toast(msg); }
+
+/* ============ Gráfico de dispersão de preços ============ */
+function dotplot(r) {
+  const pts = r.rows.filter(x => x.q.valor > 0);
+  if (!pts.length) return "";
+  let mn = Math.min(...pts.map(x => x.q.valor)), mx = Math.max(...pts.map(x => x.q.valor));
+  if (isFinite(r.lo)) mn = Math.min(mn, Math.max(0, r.lo));
+  if (isFinite(r.hi)) mx = Math.max(mx, r.hi);
+  const pad = (mx - mn) * 0.06 || mx * 0.1 || 1; mn = Math.max(0, mn - pad); mx += pad;
+  const W = 760, H = 96, L = 14, R = 14, Y = 50;
+  const x = v => L + (v - mn) / (mx - mn) * (W - L - R);
+  let s = `<line class="axis" x1="${L}" x2="${W - R}" y1="${Y}" y2="${Y}"/>`;
+  if (isFinite(r.lo) || isFinite(r.hi)) {
+    const a = x(Math.max(mn, isFinite(r.lo) ? r.lo : mn)), b = x(Math.min(mx, isFinite(r.hi) ? r.hi : mx));
+    s += `<rect class="band" x="${a}" y="${Y - 20}" width="${Math.max(1, b - a)}" height="40" rx="4"/>`;
+    if (isFinite(r.lo)) s += `<line class="band-e" x1="${a}" x2="${a}" y1="${Y - 20}" y2="${Y + 20}"/>`;
+    if (isFinite(r.hi)) s += `<line class="band-e" x1="${b}" x2="${b}" y1="${Y - 20}" y2="${Y + 20}"/>`;
+  }
+  if (r.estimado != null) {
+    const ex = x(r.estimado), anchor = ex < 90 ? "start" : ex > W - 90 ? "end" : "middle";
+    s += `<line class="est" x1="${ex}" x2="${ex}" y1="${Y - 26}" y2="${Y + 22}"/><text class="est-l" x="${ex}" y="${Y - 32}" text-anchor="${anchor}">Estimado ${esc(brl(r.estimado))}</text>`;
+  }
+  const lanes = [0, -11, 11, -20, 20], last = lanes.map(() => -1e9);
+  [...pts].sort((a, b) => a.q.valor - b.q.valor).forEach(p => {
+    const px = x(p.q.valor);
+    let li = lanes.findIndex((_, i) => px - last[i] >= 11); if (li < 0) li = 0; last[li] = px;
+    const rot = { aceita: "aceita", inexequivel: "inexequível", excessivo: "excessiva", vencida: "fora do prazo", pendente: "pendente de revisão", manual: "desconsiderada" }[p.estado];
+    s += `<circle class="pt-${p.estado}" cx="${px.toFixed(1)}" cy="${Y + lanes[li]}" r="5.5"><title>${esc(p.q.origem)}: ${esc(brl(p.q.valor))} (${rot})</title></circle>`;
+  });
+  s += `<text x="${L}" y="${H - 4}">${esc(brl(mn))}</text><text x="${W - R}" y="${H - 4}" text-anchor="end">${esc(brl(mx))}</text>`;
+  const label = `Distribuição de ${pts.length} preços. ${r.st.n} aceitos.` + (r.estimado != null ? ` Valor estimado ${brl(r.estimado)}.` : "");
+  return `<svg class="plot" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(label)}">${s}</svg>`;
+}
+const LEGENDA = `<div class="legend" aria-hidden="true">
+  <span><svg viewBox="0 0 12 12"><circle class="pt-aceita" cx="6" cy="6" r="4.5"/></svg>Aceita</span>
+  <span><svg viewBox="0 0 12 12"><circle class="pt-excessivo" cx="6" cy="6" r="4"/></svg>Inexequível ou excessiva</span>
+  <span><svg viewBox="0 0 12 12"><circle class="pt-pendente" cx="6" cy="6" r="4"/></svg>Pendente ou fora do prazo</span>
+  <span><svg viewBox="0 0 12 12"><circle class="pt-manual" cx="6" cy="6" r="4"/></svg>Desconsiderada</span>
+  <span><svg viewBox="0 0 12 12"><rect class="band" x="0" y="0" width="12" height="12" style="opacity:.35"/></svg>Faixa aceita</span>
+</div>`;
+
+/* ============ Telas ============ */
+const NAV = [
+  { v: "painel", label: "Painel", icon: "painel" },
+  { v: "cestas", label: "Cestas de preços", icon: "cestas" },
+  { v: "fornecedores", label: "Fornecedores", icon: "fornecedores" },
+  { v: "auditoria", label: "Trilha de auditoria", icon: "auditoria" },
+  { v: "config", label: "Configurações", icon: "config" }
+];
+const ESTADO_ROT = { aceita: ["ok", "Aceita"], inexequivel: ["bad", "Inexequível"], excessivo: ["bad", "Excessiva"], vencida: ["warn", "Fora do prazo"], pendente: ["warn", "Pendente"], manual: ["", "Desconsiderada"] };
+const sitChip = c => c.publicacao ? '<span class="chip ok">Publicada</span>' : c.aprovacao ? '<span class="chip info">Valores aprovados</span>' : `<span class="chip">${esc(c.sit.interna)}</span>`;
+function porLote(itens) {
+  const lotes = [];
+  itens.forEach(x => { const k = x.it.lote || "Lote único"; let l = lotes.find(l => l.k === k); if (!l) lotes.push(l = { k, itens: [] }); l.itens.push(x); });
+  lotes.forEach(l => { l.total = round2(l.itens.reduce((a, x) => a + (x.r.total || 0), 0)); });
+  return lotes;
+}
+
+function viewPainel() {
+  let itens = 0, total = 0, abertas = 0;
+  const pend = [], alertas = [];
+  for (const c of S.cestas) {
+    if (!c.publicacao) abertas++;
+    const cc = calcCesta(c); total += cc.total;
+    cc.itens.forEach(({ it, r }) => {
+      itens++;
+      if (!c.publicacao) r.alertas.filter(a => a.t === "bad").forEach(a => alertas.push({ c, it, a }));
+      r.rows.filter(x => x.estado === "pendente").forEach(x => pend.push({ c, it, q: x.q }));
+    });
+  }
+  const chain = verifyChain(), u = cur();
+  const prontas = S.cestas.filter(c => !c.publicacao && (c.aprovacao || c.sit.interna === "Consolidada"));
+  const pendHtml = pend.length ? `<ul class="list">${pend.map(({ c, it, q }) => `<li><div class="what"><b>${esc(it.descricao)}</b><small>${esc(q.origem)}, ${brl(q.valor)}, lançada por ${esc(q.lancadoPor)} em ${new Date(q.lancadoEm).toLocaleDateString("pt-BR")}</small></div>
+      <div class="row-actions">${can("revisar") && !isMine(q) ? `<button class="btn sm" data-act="approveQ" data-c="${c.id}" data-i="${it.id}" data-q="${q.id}">Aprovar</button>` : ""}<button class="btn sm" data-act="goItem" data-c="${c.id}" data-i="${it.id}">Abrir</button></div></li>`).join("")}</ul>`
+    : `<p class="empty">Nenhuma cotação aguardando revisão.</p>`;
+  const alertHtml = alertas.length ? `<ul class="list">${alertas.slice(0, 10).map(({ c, it, a }) => `<li><div class="what"><b>${esc(it.descricao)}</b><small>${esc(c.numero)}: ${esc(a.m)}</small></div><button class="btn sm" data-act="goItem" data-c="${c.id}" data-i="${it.id}">Resolver</button></li>`).join("")}</ul>`
+    : `<p class="empty">Nenhum item bloqueando aprovação.</p>`;
+  const recent = S.audit.slice(-7).reverse();
+  return {
+    title: "Painel",
+    html: `<div class="head"><div><h1>Painel</h1><p class="lead">O que precisa da sua atenção, com base no art. 23 da Lei nº 14.133/2021 e na IN SEGES/ME nº 65/2021.</p></div>
+      <div class="actions">${abtn("criarCesta", "newCesta", ic("plus") + "Nova cesta", "", "primary")}</div></div>
+    <div class="kpis">
+      <div class="kpi"><span>Cestas em andamento</span><b>${int(abertas)}</b></div>
+      <div class="kpi"><span>Itens pesquisados</span><b>${int(itens)}</b></div>
+      <div class="kpi"><span>Cotações aguardando revisão</span><b>${int(pend.length)}</b></div>
+      <div class="kpi"><span>Valor estimado total</span><b>${brl(total)}</b></div>
+    </div>
+    <div class="grid g3">
+      <div class="stack">
+        <section class="panel"><h2>Aguardando revisão</h2><p class="muted">Cotações de níveis iniciais só entram no cálculo depois de aprovadas por outra pessoa, de nível 3 ou acima.</p>${pendHtml}</section>
+        <section class="panel"><h2>Itens que impedem a aprovação</h2>${alertHtml}</section>
+      </div>
+      <div class="stack">
+        ${prontas.length ? `<section class="panel"><h2>Próximas etapas</h2><ul class="list">${prontas.map(c => `<li><div class="what"><b>${esc(c.numero)}</b><small>${esc(c.objeto)}</small></div><a class="btn sm" href="#/cesta/${c.id}">${c.aprovacao ? "Publicar" : "Aprovar valores"}</a></li>`).join("")}</ul></section>` : ""}
+        <section class="panel"><h2>Integridade da trilha</h2>
+          <div class="alert ${chain.ok ? "ok" : "bad"}">${ic(chain.ok ? "ok" : "bad")}<div>${chain.ok ? `${int(chain.n)} registros encadeados por SHA-256, nenhuma alteração detectada.` : `O registro nº ${chain.at} foi alterado fora do sistema. A trilha não é confiável a partir dele.`}</div></div>
+        </section>
+        <section class="panel"><h2>Atividade recente</h2><ul class="list">${recent.map(e => `<li><div class="what"><b>${esc(e.acao)}</b><small>${esc(e.alvo)}, por ${esc(e.user)}, ${fdt(e.ts)}</small></div></li>`).join("")}</ul>
+          <a href="#/auditoria" class="btn link">Ver trilha completa</a></section>
+      </div>
+    </div>`
+  };
+}
+
+function cestasRows() {
+  const q = norm(UI.cestasQ);
+  const list = S.cestas.filter(c => !q || norm([c.numero, c.objeto, c.unidade, c.processo].join(" ")).includes(q));
+  if (!list.length) return `<tr><td colspan="6" class="empty">${S.cestas.length ? "Nenhuma cesta corresponde à busca." : "Nenhuma cesta ainda. Crie a primeira para começar a pesquisa."}</td></tr>`;
+  return list.map(c => {
+    const cc = calcCesta(c), prontos = cc.itens.filter(x => !x.r.bloqueia).length;
+    return `<tr><td class="num"><a href="#/cesta/${c.id}">${esc(c.numero)}</a></td><td><a href="#/cesta/${c.id}">${esc(c.objeto)}</a><br><small class="muted">${esc(c.unidade)}</small></td>
+      <td class="num">${fdate(c.dataBase)}</td><td>${sitChip(c)}</td><td class="r num">${prontos}/${c.itens.length}</td><td class="r num"><b>${brl(cc.total)}</b></td></tr>`;
+  }).join("");
+}
+function viewCestas() {
+  return {
+    title: "Cestas de preços",
+    html: `<div class="head"><div><h1>Cestas de preços</h1><p class="lead">Cada cesta reúne os itens de uma contratação e as cotações que sustentam o valor estimado.</p></div>
+      <div class="actions">${abtn("criarCesta", "newCesta", ic("plus") + "Nova cesta", "", "primary")}</div></div>
+    <section class="panel">
+      <input class="in search" type="search" placeholder="Buscar por número, objeto ou unidade" aria-label="Buscar cestas" data-live="cestasQ" value="${esc(UI.cestasQ)}">
+      <div class="tw"><table class="t"><thead><tr><th>Número</th><th>Objeto</th><th>Data-base</th><th>Situação</th><th class="r">Itens prontos</th><th class="r">Valor estimado</th></tr></thead>
+      <tbody id="cestasBody">${cestasRows()}</tbody></table></div>
+    </section>`
+  };
+}
+
+function itemHtml(c, it, r, n) {
+  const L = locked(c), u = cur();
+  const worst = r.alertas.some(a => a.t === "bad") || r.bloqueia ? "bad" : r.alertas.length ? "warn" : "ok";
+  const flagLabel = { bad: "Impede a aprovação", warn: "Tem avisos", ok: "Sem pendências" }[worst];
+  const qrows = r.rows.map(({ q, estado, motivo }) => {
+    const [cls, rot] = ESTADO_ROT[estado];
+    const idade = c.dataBase && q.data ? daysBetween(q.data, c.dataBase) : null;
+    const acts = L ? "" : [
+      estado === "pendente" && can("revisar") && !isMine(q) ? `<button class="btn sm" data-act="approveQ" data-c="${c.id}" data-i="${it.id}" data-q="${q.id}">Aprovar</button>` : "",
+      estado !== "manual" && can("revisar") ? `<button class="btn sm" data-act="excludeQ" data-c="${c.id}" data-i="${it.id}" data-q="${q.id}">Desconsiderar</button>` : "",
+      estado === "manual" && can("revisar") ? `<button class="btn sm" data-act="restoreQ" data-c="${c.id}" data-i="${it.id}" data-q="${q.id}">Restaurar</button>` : "",
+      isMine(q) || can("revisar") ? `<button class="btn sm danger" data-act="delQ" data-c="${c.id}" data-i="${it.id}" data-q="${q.id}" aria-label="Remover cotação de ${esc(q.origem)}">Remover</button>` : ""
+    ].join("");
+    return `<tr><td><span class="chip info" title="${esc(FONTES[q.fonte].nome)}">Inciso ${q.fonte}</span></td>
+      <td>${esc(q.origem)}${q.ref ? `<span class="why">${esc(q.ref)}</span>` : ""}</td>
+      <td class="num">${fdate(q.data)}${idade != null ? `<span class="why">${idade} dias antes da data-base</span>` : ""}</td>
+      <td class="r num"><b>${brl(q.valor)}</b></td>
+      <td class="st"><span class="chip ${cls}">${rot}</span>${motivo ? `<span class="why">${esc(motivo)}</span>` : ""}</td>
+      <td>${esc(q.lancadoPor)}${q.aprovadoPor && q.aprovadoPor !== q.lancadoPor ? `<span class="why">aprovada por ${esc(q.aprovadoPor)}</span>` : ""}</td>
+      <td><div class="row-actions">${acts}</div></td></tr>`;
+  }).join("");
+  const st = r.st;
+  const faixa = isFinite(r.lo) ? `${brl(r.lo)} a ${brl(r.hi)}` : (c.calc.criterio === "nenhum" ? "sem saneamento" : "precisa de 3 preços");
+  return `<details class="item" id="it-${it.id}" data-item="${it.id}" ${UI.open.has(it.id) ? "open" : ""}>
+    <summary>
+      <span class="it-n">${n}</span>
+      <span class="it-d"><b>${esc(it.descricao)}</b><small>${it.codigo ? `Código ${esc(it.codigo)}, ` : ""}${int(it.quantidade)} ${esc(it.unidade)}</small></span>
+      <span class="it-q num">${st.n} de ${r.rows.length} aceitas</span>
+      <span class="it-v num">${brl(r.estimado)}</span>
+      <span class="it-t num">${brl(r.total)}</span>
+      <span class="it-f" title="${flagLabel}">${ic(worst, worst)}<span class="sr">${flagLabel}</span></span>
+    </summary>
+    <div class="it-body">
+      ${r.rows.length ? `<div>${dotplot(r)}${LEGENDA}</div>
+      <div class="stats"><span>Média <b>${brl(st.mean)}</b></span><span>Mediana <b>${brl(st.med)}</b></span><span>Menor <b>${brl(st.min)}</b></span><span>Coef. de variação <b>${st.n > 1 ? pct(st.cv) : "—"}</b></span><span>Faixa aceita <b>${faixa}</b></span><span>Método <b>${METODOS[c.calc.metodo]}</b></span></div>` : ""}
+      ${r.alertas.length ? `<div class="alerts">${r.alertas.map(a => `<div class="alert ${a.t}">${ic(a.t === "bad" ? "bad" : "warn")}<div>${esc(a.m)}</div></div>`).join("")}</div>` : ""}
+      ${r.rows.length ? `<div class="tw"><table class="t qtab"><thead><tr><th>Fonte</th><th>Origem</th><th>Data</th><th class="r">Valor unitário</th><th>Situação</th><th>Lançada por</th><th class="r">Ações</th></tr></thead><tbody>${qrows}</tbody></table></div>` : `<p class="muted">Nenhuma cotação lançada para este item.</p>`}
+      ${L ? "" : `<form data-form="addQ" data-c="${c.id}" data-i="${it.id}" novalidate>
+        <p class="sub-h">Lançar cotação${!can("revisar") ? " (vai para revisão de nível 3 ou acima)" : ""}</p>
+        <div class="qform">
+          <label class="f">Fonte<select class="in" name="fonte">${Object.keys(FONTES).map(k => `<option value="${k}" ${k === "IV" ? "selected" : ""}>Inciso ${k}: ${esc(FONTES[k].nome)}</option>`).join("")}</select></label>
+          <label class="f">Origem<input class="in" name="origem" list="origens" placeholder="Fornecedor, órgão ou sistema" autocomplete="off"></label>
+          <label class="f">Valor unitário<input class="in" name="valor" inputmode="decimal" placeholder="0,00" autocomplete="off"></label>
+          <label class="f">Data da cotação<input class="in" name="data" type="date" value="${today()}" max="${today()}"></label>
+          <label class="f">Referência <small>(opcional)</small><input class="in" name="ref" placeholder="Ofício, link ou nº do documento" autocomplete="off"></label>
+          <button class="btn primary" type="submit">${ic("plus")}Lançar</button>
+        </div></form>`}
+      <label class="f">Justificativa do item <small>exigida com menos de 3 preços ou sem preços dos incisos I e II</small>
+        <textarea class="in" data-bind="itemJust" data-c="${c.id}" data-i="${it.id}" rows="2" ${L || !can("editarItens") ? "disabled" : ""} placeholder="Ex.: mercado local com apenas dois fornecedores do item; consultas aos incisos I e II sem resultado.">${esc(it.justificativa)}</textarea></label>
+      ${L ? "" : `<div class="actions">${abtn("editarItens", "editItem", "Editar item", `data-c="${c.id}" data-i="${it.id}"`, "sm")}${abtn("editarItens", "delItem", "Remover item", `data-c="${c.id}" data-i="${it.id}"`, "sm danger")}</div>`}
+    </div>
+  </details>`;
+}
+
+function viewCesta(c) {
+  const L = locked(c), cc = calcCesta(c);
+  let n = 0;
+  const lotesHtml = porLote(cc.itens).map(l => `<section class="lote"><div class="lote-h"><h2>${esc(l.k)}</h2><span class="muted">Subtotal <b class="num" style="color:var(--text)">${brl(l.total)}</b></span></div>
+    <div class="items"><div class="cols" aria-hidden="true"><span>Nº</span><span>Item</span><span>Preços</span><span style="text-align:right">Unitário</span><span style="text-align:right">Total</span><span></span></div>
+    ${l.itens.map(x => itemHtml(c, x.it, x.r, ++n)).join("")}</div></section>`).join("");
+  const dims = Object.entries(DIMS).map(([k, d]) => {
+    const idx = d.estados.indexOf(c.sit[k]);
+    return `<button type="button" class="dim" data-act="dim" data-c="${c.id}" data-k="${k}" ${L ? "disabled" : ""} aria-label="${esc(d.nome)}: ${esc(c.sit[k])}${L ? "" : ". Alterar"}">
+      <span>${esc(d.nome)}</span><b>${esc(c.sit[k])}</b><span class="track">${d.estados.map((_, i) => `<i class="${i <= idx ? "on" : ""}"></i>`).join("")}</span></button>`;
+  }).join("");
+  const crit = c.calc.criterio === "mediana" ? `${c.calc.inf}% a ${c.calc.sup}% da mediana` : c.calc.criterio === "dp" ? `média ± ${String(c.calc.k).replace(".", ",")} desvio-padrão` : "sem saneamento";
+  const banner = L && mapaHash(c) !== c.publicacao.hash ? `<div class="alert bad" style="margin-bottom:16px">${ic("bad")}<div>Os dados desta cesta foram alterados fora do sistema depois da publicação: o código de verificação não confere mais. Reabra a cesta e publique de novo, ou restaure um backup.</div></div>`
+    : L ? `<div class="alert ok" style="margin-bottom:16px">${ic("ok")}<div>Publicada em ${fdt(c.publicacao.ts)} por ${esc(c.publicacao.user)}. Código de verificação <span class="hash">${c.publicacao.hash}</span>. Alterações exigem reabertura por nível 5.</div></div>`
+    : c.aprovacao ? `<div class="alert info" style="margin-bottom:16px">${ic("info")}<div>Valores aprovados por ${esc(c.aprovacao.user)} em ${fdt(c.aprovacao.ts)}. Falta a publicação por um Expert diferente de quem aprovou.</div></div>`
+    : cc.bloqueios.length ? `<div class="alert warn" style="margin-bottom:16px">${ic("warn")}<div>${cc.bloqueios.length} de ${c.itens.length} itens impedem a aprovação. Abra os itens marcados em vermelho.</div></div>` : "";
+  const acts = L ? `<a class="btn primary" href="#/cesta/${c.id}/mapa">${ic("doc")}Mapa de preços</a>${abtn("reabrir", "reopen", "Reabrir", `data-c="${c.id}"`)}`
+    : `${abtn("editarItens", "addItem", ic("plus") + "Item", `data-c="${c.id}"`)}${abtn("editarItens", "pasteItems", "Colar do Excel", `data-c="${c.id}"`)}
+       <a class="btn" href="#/cesta/${c.id}/serie">Lançar em série</a>${abtn("metodo", "calcCfg", "Método de cálculo", `data-c="${c.id}"`)}
+       <a class="btn" href="#/cesta/${c.id}/mapa">${ic("doc")}Mapa</a>
+       ${c.aprovacao ? abtn("publicar", "publish", "Publicar", `data-c="${c.id}"`, "primary") : abtn("aprovar", "approveC", "Aprovar valores", `data-c="${c.id}"`, "primary")}`;
+  return {
+    title: c.numero,
+    html: `<div class="head"><div><p class="sub"><a href="#/cestas">Cestas</a> / ${esc(c.numero)}</p><h1>${esc(c.objeto)}</h1></div><div class="actions">${acts}</div></div>
+    ${banner}
+    <div class="dims">${dims}</div>
+    <section class="panel" style="margin-bottom:8px"><dl class="meta">
+      <div><dt>Unidade demandante</dt><dd>${esc(c.unidade)}</dd></div>
+      <div><dt>Processo</dt><dd>${esc(c.processo || "Não informado")}</dd></div>
+      <div><dt>Data-base (divulgação do edital)</dt><dd>${fdate(c.dataBase)}</dd></div>
+      <div><dt>Responsável</dt><dd>${esc(c.responsavel)}</dd></div>
+      <div><dt>Método e saneamento</dt><dd>${METODOS[c.calc.metodo]}, ${crit}</dd></div>
+      <div><dt>Valor estimado total</dt><dd class="num" style="font-size:20px">${brl(cc.total)}</dd></div>
+    </dl>
+    <div class="actions">${L ? "" : abtn("editarItens", "editCesta", "Editar dados", `data-c="${c.id}"`, "sm")}<button class="btn sm" data-act="csv" data-c="${c.id}">${ic("down")}Exportar CSV</button>${L ? "" : abtn("excluirCesta", "delCesta", "Excluir cesta", `data-c="${c.id}"`, "sm danger")}</div>
+    </section>
+    ${c.itens.length ? lotesHtml : `<div class="panel empty" style="margin-top:16px">Esta cesta ainda não tem itens. Use <b>Item</b> ou <b>Colar do Excel</b> para incluir.</div>`}`
+  };
+}
+
+function viewSerie(c) {
+  if (locked(c)) return { title: c.numero, html: `<div class="panel empty">Cesta publicada. Reabra para lançar novas cotações. <a href="#/cesta/${c.id}">Voltar</a></div>` };
+  if (!c.itens.length) return { title: c.numero, html: `<div class="panel empty">A cesta ainda não tem itens. <a href="#/cesta/${c.id}">Voltar e incluir itens</a></div>` };
+  return {
+    title: "Lançamento em série",
+    html: `<div class="head"><div><p class="sub"><a href="#/cesta/${c.id}">${esc(c.numero)}</a> / Lançamento em série</p><h1>Lançar uma proposta inteira</h1>
+      <p class="lead">Informe a origem uma vez e digite os preços item a item. Enter leva ao próximo campo; itens em branco são ignorados.</p></div></div>
+    <form class="panel" data-form="serie" data-c="${c.id}" novalidate>
+      <div class="qform" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
+        <label class="f">Fonte<select class="in" name="fonte">${Object.keys(FONTES).map(k => `<option value="${k}" ${k === "IV" ? "selected" : ""}>Inciso ${k}: ${esc(FONTES[k].nome)}</option>`).join("")}</select></label>
+        <label class="f">Origem<input class="in" name="origem" list="origens" placeholder="Fornecedor ou sistema consultado" autocomplete="off"></label>
+        <label class="f">Data da cotação<input class="in" name="data" type="date" value="${today()}" max="${today()}"></label>
+        <label class="f">Referência <small>(opcional)</small><input class="in" name="ref" placeholder="Ofício, proposta ou link" autocomplete="off"></label>
+      </div>
+      <div class="tw" style="margin-top:16px"><table class="t serie"><thead><tr><th>Nº</th><th>Item</th><th>Und.</th><th class="r">Quantidade</th><th class="r">Valor unitário</th></tr></thead><tbody>
+        ${c.itens.map((it, i) => `<tr><td class="num muted">${i + 1}</td><td>${esc(it.descricao)}</td><td>${esc(it.unidade)}</td><td class="r num">${int(it.quantidade)}</td>
+        <td class="r"><input class="in" name="v_${it.id}" inputmode="decimal" placeholder="0,00" aria-label="Valor unitário de ${esc(it.descricao)}" data-serie autocomplete="off"></td></tr>`).join("")}
+      </tbody></table></div>
+      <div class="actions" style="margin-top:16px;justify-content:flex-end"><a class="btn" href="#/cesta/${c.id}">Cancelar</a><button class="btn primary" type="submit">Salvar lançamentos</button></div>
+    </form>`
+  };
+}
+
+function viewMapa(c) {
+  const cc = calcCesta(c), org = S.config.orgao || "Órgão não configurado (defina em Configurações)";
+  const atual = mapaHash(c), hash = c.publicacao ? c.publicacao.hash : atual;
+  // O mapa publicado é reconferido: se os dados salvos mudaram depois da publicação, o selo não confere.
+  const adulterado = c.publicacao && atual !== c.publicacao.hash;
+  let n = 0;
+  const crit = c.calc.criterio === "mediana" ? `abaixo de ${c.calc.inf}% ou acima de ${c.calc.sup}% da mediana do conjunto (preços inexequíveis ou excessivamente elevados)`
+    : c.calc.criterio === "dp" ? `fora do intervalo da média mais ou menos ${String(c.calc.k).replace(".", ",")} desvio-padrão` : "";
+  const justs = cc.itens.filter(x => (x.it.justificativa || "").trim());
+  return {
+    title: "Mapa de preços " + c.numero,
+    html: `<div class="head no-print"><div><p class="sub"><a href="#/cesta/${c.id}">${esc(c.numero)}</a> / Mapa de preços</p><h1>Mapa de apuração de preços</h1></div>
+      <div class="actions"><button class="btn primary" data-act="print">${ic("print")}Imprimir ou salvar PDF</button><button class="btn" data-act="csv" data-c="${c.id}">${ic("down")}Exportar CSV</button></div></div>
+    <article class="doc">
+      <p class="org">${esc(org)}</p>
+      <h1>Mapa de apuração de preços: ${esc(c.numero)}</h1>
+      ${adulterado ? `<div class="minuta">ATENÇÃO: os dados desta cesta foram alterados depois da publicação. Este quadro não corresponde ao código de verificação publicado.</div>`
+        : c.publicacao ? "" : `<div class="minuta">MINUTA: documento ainda não publicado. Valores sujeitos a alteração.</div>`}
+      <dl class="kv">
+        <dt>Objeto</dt><dd>${esc(c.objeto)}</dd>
+        <dt>Processo administrativo</dt><dd>${esc(c.processo || "Não informado")}</dd>
+        <dt>Unidade demandante</dt><dd>${esc(c.unidade)}</dd>
+        <dt>Data-base</dt><dd>${fdate(c.dataBase)}</dd>
+        <dt>Método de apuração</dt><dd>${METODOS[c.calc.metodo]} dos preços válidos</dd>
+        <dt>Valor global estimado</dt><dd>${brl(cc.total)}</dd>
+      </dl>
+      ${porLote(cc.itens).map(l => `<h2>${esc(l.k)}</h2><table><thead><tr><th>Nº</th><th>Descrição</th><th>Und.</th><th class="r">Qtd.</th><th>Preços pesquisados</th><th class="r">Unitário estimado</th><th class="r">Total</th></tr></thead><tbody>
+        ${l.itens.map(({ it, r }) => `<tr><td>${++n}</td><td>${esc(it.descricao)}${it.codigo ? `<br><small>Código ${esc(it.codigo)}</small>` : ""}</td><td>${esc(it.unidade)}</td><td class="r">${int(it.quantidade)}</td>
+          <td class="px">${r.rows.map(x => { const t = `Inc. ${x.q.fonte}, ${esc(x.q.origem)}, ${fdate(x.q.data)}: ${brl(x.q.valor)}`; return x.estado === "aceita" ? t : `<s>${t}</s> (${ESTADO_ROT[x.estado][1].toLowerCase()})`; }).join("<br>") || "Sem cotações"}</td>
+          <td class="r">${brl(r.estimado)}</td><td class="r">${brl(r.total)}</td></tr>`).join("")}
+        <tr class="tot"><td colspan="6">Subtotal: ${esc(l.k)}</td><td class="r">${brl(l.total)}</td></tr></tbody></table>`).join("")}
+      <h2>Fundamentação</h2>
+      <p>Pesquisa de preços realizada nos termos do art. 23 da Lei nº 14.133/2021, adotando como referência os parâmetros e critérios da IN SEGES/ME nº 65/2021. O valor estimado de cada item corresponde à ${METODOS[c.calc.metodo].toLowerCase()} dos preços válidos.
+      Foram desconsideradas as cotações pendentes de revisão, as obtidas fora dos prazos do art. 5º da IN (seis meses para os incisos III e IV; um ano para os incisos II e V)${crit ? ` e as que ficaram ${crit}` : ""}. Preços riscados no quadro não compõem o cálculo.</p>
+      ${justs.length ? `<h2>Justificativas registradas</h2>${justs.map(({ it }) => `<p><b>${esc(it.descricao)}:</b> ${esc(it.justificativa)}</p>`).join("")}` : ""}
+      <div class="sign"><div>${esc(c.responsavel)}<br>Responsável pela pesquisa</div><div>${c.aprovacao ? esc(c.aprovacao.user) : "&nbsp;"}<br>Aprovação dos valores</div><div>${c.publicacao ? esc(c.publicacao.user) : "&nbsp;"}<br>Publicação</div></div>
+      <p class="ver">Código de verificação (SHA-256): <span class="hash">${hash}</span><br>${c.publicacao ? `Publicado em ${fdt(c.publicacao.ts)}.${c.publicacao.trilha ? ` Trilha de auditoria até o registro nº ${c.publicacao.seq}: <span class="hash">${esc(c.publicacao.trilha)}</span>` : ""}` : `Gerado em ${fdt(new Date().toISOString())}. O código muda a cada alteração enquanto a cesta não for publicada.`}</p>
+    </article>`
+  };
+}
+
+function viewFornecedores() {
+  const usos = {};
+  S.cestas.forEach(c => c.itens.forEach(it => it.cotacoes.forEach(q => { if (q.fornecedorId) usos[q.fornecedorId] = (usos[q.fornecedorId] || 0) + 1; })));
+  const rows = S.fornecedores.map(f => `<tr><td><b>${esc(f.nome)}</b><br><small class="muted">${esc(f.cidade || "")}</small></td>
+    <td class="num">${esc(fmtCnpj(f.cnpj))} ${cnpjValido(f.cnpj) ? "" : '<span class="chip bad">CNPJ inválido</span>'}</td>
+    <td>${f.email ? `<a href="mailto:${esc(f.email)}">${esc(f.email)}</a>` : ""}<br><small class="muted">${esc(f.telefone || "")}</small></td>
+    <td class="r num">${usos[f.id] || 0}</td>
+    <td><div class="row-actions">${abtn("fornecedor", "editForn", "Editar", `data-f="${f.id}"`, "sm")}${abtn("fornecedor", "delForn", "Excluir", `data-f="${f.id}"`, "sm danger")}</div></td></tr>`).join("");
+  return {
+    title: "Fornecedores",
+    html: `<div class="head"><div><h1>Fornecedores</h1><p class="lead">Cadastro usado na pesquisa direta (inciso IV). O CNPJ é validado pelos dígitos verificadores, inclusive no formato alfanumérico.</p></div>
+      <div class="actions">${abtn("fornecedor", "newForn", ic("plus") + "Novo fornecedor", "", "primary")}</div></div>
+    <section class="panel"><div class="tw"><table class="t"><thead><tr><th>Fornecedor</th><th>CNPJ</th><th>Contato</th><th class="r">Cotações</th><th class="r">Ações</th></tr></thead>
+    <tbody>${rows || `<tr><td colspan="5" class="empty">Nenhum fornecedor cadastrado.</td></tr>`}</tbody></table></div></section>`
+  };
+}
+
+function auditRows() {
+  const q = norm(UI.auditQ);
+  const list = S.audit.filter(e => !q || norm([e.user, e.acao, e.alvo, e.detalhe].join(" ")).includes(q)).slice().reverse();
+  const ch = verifyChain(), bad = ch.ok ? null : ch.at;
+  if (!list.length) return `<tr><td colspan="6" class="empty">Nenhum registro encontrado.</td></tr>`;
+  return list.slice(0, 400).map(e => `<tr ${bad && e.seq >= bad ? 'style="background:var(--bad-soft)"' : ""}><td class="num muted">${e.seq}</td><td class="num">${fdt(e.ts)}</td><td>${esc(e.user)}<br><small class="muted">${NIVEIS[e.nivel] || ""}</small></td>
+    <td><b>${esc(e.acao)}</b><br><small class="muted">${esc(e.alvo)}</small></td><td>${esc(e.detalhe)}</td><td class="hash muted" title="${esc(e.hash)}">${esc(String(e.hash).slice(0, 12))}…</td></tr>`).join("");
+}
+function viewAuditoria() {
+  const ch = verifyChain();
+  return {
+    title: "Trilha de auditoria",
+    html: `<div class="head"><div><h1>Trilha de auditoria</h1><p class="lead">Cada registro guarda o código SHA-256 do anterior. Alterar ou apagar um registro isolado quebra a cadeia. Quem reescrever a cadeia inteira só é pego comparando com um código guardado fora do sistema: o impresso no mapa publicado ou o abaixo.</p></div>
+      <div class="actions"><button class="btn" data-act="verify">${ic("auditoria")}Verificar integridade</button><button class="btn" data-act="auditCsv">${ic("down")}Exportar CSV</button></div></div>
+    <div class="alert ${ch.ok ? "ok" : "bad"}" style="margin-bottom:16px">${ic(ch.ok ? "ok" : "bad")}<div>${ch.ok ? `Cadeia íntegra: ${int(ch.n)} registros conferidos.${S.audit.length ? ` Código do registro nº ${S.audit.length}: <span class="hash">${esc(S.audit[S.audit.length - 1].hash)}</span>` : ""}` : `Cadeia quebrada no registro nº ${ch.at}. Os registros destacados não podem ser considerados confiáveis.`}</div></div>
+    <section class="panel">
+      <input class="in search" type="search" placeholder="Buscar por usuário, ação ou item" aria-label="Buscar na trilha" data-live="auditQ" value="${esc(UI.auditQ)}">
+      <div class="tw"><table class="t"><thead><tr><th>Nº</th><th>Data e hora</th><th>Usuário</th><th>Ação</th><th>Detalhe</th><th>Código</th></tr></thead><tbody id="auditBody">${auditRows()}</tbody></table></div>
+    </section>`
+  };
+}
+
+function viewConfig() {
+  const u = cur();
+  const users = S.users.map(x => `<tr><td><b>${esc(x.nome)}</b>${x.id === u.id ? ' <span class="chip info">você</span>' : ""}</td>
+    <td><select class="in" style="max-width:220px" data-bind="userLevel" data-u="${x.id}" ${can("usuarios") ? "" : "disabled"} aria-label="Nível de ${esc(x.nome)}">${NIVEIS.slice(1).map((n, i) => `<option value="${i + 1}" ${x.nivel === i + 1 ? "selected" : ""}>Nível ${i + 1}: ${n}</option>`).join("")}</select></td>
+    <td class="r">${abtn("usuarios", "delUser", "Remover", `data-u="${x.id}"`, "sm danger")}</td></tr>`).join("");
+  const perm = Object.keys(ALCADA).filter(k => k !== "editarItens").map(k => `<tr><td>${ALCADA_ROT[k]}</td>${[1, 2, 3, 4, 5].map(n => `<td>${n >= ALCADA[k] ? '<span class="yes" aria-label="sim">✓</span>' : '<span class="no" aria-label="não">·</span>'}</td>`).join("")}</tr>`).join("");
+  return {
+    title: "Configurações",
+    html: `<div class="head"><div><h1>Configurações</h1></div></div>
+    <div class="grid g2">
+      <section class="panel"><h2>Órgão</h2><p class="muted">Aparece no cabeçalho do mapa de preços.</p>
+        <label class="f">Nome do órgão<input class="in" data-bind="orgao" value="${esc(S.config.orgao)}" placeholder="Ex.: Prefeitura Municipal de …"></label></section>
+      <section class="panel"><h2>Aparência</h2><label class="f">Tema<select class="in" data-bind="tema">${[["auto", "Seguir o sistema"], ["light", "Claro"], ["dark", "Escuro"]].map(([v, l]) => `<option value="${v}" ${S.config.tema === v ? "selected" : ""}>${l}</option>`).join("")}</select></label></section>
+      <section class="panel"><h2>Usuários e alçadas</h2><p class="muted">Identificação local, sem senha, para demonstrar a segregação de funções. Em uso real, a identidade deve vir do login de um servidor.</p>
+        <div class="tw"><table class="t"><tbody>${users}</tbody></table></div>
+        <div class="actions" style="margin-top:12px">${abtn("usuarios", "newUser", ic("plus") + "Novo usuário", "", "sm")}</div></section>
+      <section class="panel"><h2>Quem pode fazer o quê</h2><div class="tw"><table class="t perm"><thead><tr><th>Ação</th>${NIVEIS.slice(1).map((n, i) => `<th title="${n}">${i + 1}</th>`).join("")}</tr></thead><tbody>${perm}</tbody></table></div>
+        <p class="muted" style="margin-top:10px;font-size:13px">Além do nível, ninguém aprova a própria cotação, e quem publica não pode ser quem aprovou os valores.</p></section>
+      <section class="panel"><h2>Dados</h2><p class="muted">Tudo fica neste navegador. Exporte um backup antes de limpar o histórico do navegador ou trocar de computador.</p>
+        <div class="actions"><button class="btn" data-act="backup">${ic("down")}Exportar backup</button><button class="btn" data-act="restore">Importar backup</button>
+        <button class="btn" data-act="resetDemo">Restaurar dados de exemplo</button><button class="btn danger" data-act="wipe">Apagar tudo</button></div></section>
+      <section class="panel"><h2>Atalhos</h2><ul class="list"><li><span>Busca rápida</span><kbd style="margin:0">Ctrl K</kbd></li><li><span>Próximo campo no lançamento em série</span><kbd style="margin:0">Enter</kbd></li></ul></section>
+    </div>`
+  };
+}
+
+/* ============ Roteamento ============ */
+function route() { const [v, id, sub] = (location.hash.replace(/^#\/?/, "") || "painel").split("/"); return { v, id, sub }; }
+function render() {
+  const r = route();
+  let out;
+  try {
+    if (r.v === "cesta") {
+      const c = getC(r.id);
+      out = !c ? { title: "Cesta não encontrada", html: `<div class="panel empty">Esta cesta não existe mais. <a href="#/cestas">Voltar às cestas</a></div>` }
+        : r.sub === "mapa" ? viewMapa(c) : r.sub === "serie" ? viewSerie(c) : viewCesta(c);
+    } else out = ({ painel: viewPainel, cestas: viewCestas, fornecedores: viewFornecedores, auditoria: viewAuditoria, config: viewConfig }[r.v] || viewPainel)();
+  } catch (e) {
+    console.error(e);
+    out = { title: "Erro", html: `<div class="alert bad">${ic("bad")}<div>Não foi possível montar esta tela: ${esc(e.message)}. Exporte um backup em Configurações antes de continuar.</div></div>` };
+  }
+  $("#view").innerHTML = out.html + `<datalist id="origens">${[...S.fornecedores.map(f => f.nome), ...ORIGENS_OFICIAIS].map(o => `<option value="${esc(o)}">`).join("")}</datalist>`;
+  $("#crumb").textContent = out.title;
+  document.title = out.title + " · Cesta Pública";
+  const active = r.v === "cesta" ? "cestas" : r.v;
+  $("#nav").innerHTML = NAV.map(n => `<a href="#/${n.v}" ${n.v === active ? 'aria-current="page"' : ""}>${ic(n.icon)}${n.label}</a>`).join("");
+  $("#who").innerHTML = S.users.map(u => `<option value="${u.id}" ${u.id === cur().id ? "selected" : ""}>${esc(u.nome)}, nível ${u.nivel} (${NIVEIS[u.nivel]})</option>`).join("");
+  $("#saveState").innerHTML = saveFail ? '<span class="savefail" role="alert">Não salvo neste navegador: exporte um backup</span>' : "";
+  if (UI.focusItem) {
+    const el = document.getElementById("it-" + UI.focusItem); UI.focusItem = null;
+    if (el) { el.open = true; el.scrollIntoView({ block: "start" }); el.querySelector("summary").focus({ preventScroll: true }); }
+  }
+}
+function applyTheme() {
+  const t = S.config.tema;
+  if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+  else document.documentElement.removeAttribute("data-theme");
+}
+function download(name, text, type) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], { type }));
+  a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+/* ============ Ações ============ */
+function cestaFields(c = {}) {
+  return [
+    { name: "numero", label: "Número da cesta", required: true, value: c.numero || `CP-${new Date().getFullYear()}/${String(S.cestas.length + 1).padStart(3, "0")}` },
+    { name: "objeto", label: "Objeto", required: true, value: c.objeto, type: "textarea", rows: 2 },
+    { name: "unidade", label: "Unidade demandante", required: true, value: c.unidade, placeholder: "Secretaria Municipal de …" },
+    { name: "processo", label: "Processo administrativo", value: c.processo },
+    { name: "dataBase", label: "Data-base", type: "date", required: true, value: c.dataBase || addDays(today(), 30), help: "Data prevista de divulgação do edital. Os prazos de validade das cotações contam a partir dela." },
+    { name: "responsavel", label: "Responsável pela pesquisa", required: true, value: c.responsavel || cur().nome }
+  ];
+}
+function itemFields(it = {}) {
+  return [
+    { name: "descricao", label: "Descrição", type: "textarea", rows: 2, required: true, value: it.descricao },
+    { name: "unidade", label: "Unidade de fornecimento", required: true, value: it.unidade, placeholder: "kg, un, L, pct…" },
+    { name: "quantidade", label: "Quantidade", required: true, value: it.quantidade != null ? String(it.quantidade).replace(".", ",") : "", inputmode: "decimal" },
+    { name: "lote", label: "Lote", value: it.lote, placeholder: "Lote único" },
+    { name: "codigo", label: "Código CATMAT/CATSER", value: it.codigo }
+  ];
+}
+function quoteRef(d) { const c = getC(d.c), it = getI(c, d.i), q = getQ(it, d.q); return c && it && q ? { c, it, q } : null; }
+function guardOpen(c) { if (!c) { toast("Cesta não encontrada.", "err"); return false; } if (locked(c)) { toast("Cesta publicada. Reabra para alterar.", "err"); return false; } return true; }
+
+const ACT = {
+  palette: openPalette,
+  theme() { const dark = matchMedia("(prefers-color-scheme: dark)").matches; const now = S.config.tema === "auto" ? (dark ? "dark" : "light") : S.config.tema; S.config.tema = now === "dark" ? "light" : "dark"; applyTheme(); save(); render(); },
+  print() { window.print(); },
+  goItem(d) { UI.open.add(d.i); UI.focusItem = d.i; const h = "#/cesta/" + d.c; if (location.hash === h) render(); else location.hash = h; },
+  newCesta() {
+    if (!need("criarCesta")) return;
+    openForm({ title: "Nova cesta de preços", fields: cestaFields(), submit: "Criar cesta", onSubmit(v) {
+      if (S.cestas.some(c => c.numero === v.numero)) return "Já existe uma cesta com este número.";
+      const c = { id: uid(), ...v, criadoEm: new Date().toISOString(), calc: { metodo: "media", criterio: "mediana", k: 1, inf: 70, sup: 130 },
+        sit: { interna: "Rascunho", cliente: "Solicitada", documento: "Minuta", posse: "Pesquisador" }, aprovacao: null, publicacao: null, itens: [] };
+      S.cestas.unshift(c); log("Cesta criada", c.numero, c.objeto); save(); location.hash = "#/cesta/" + c.id; toast("Cesta criada.");
+    } });
+  },
+  editCesta(d) {
+    const c = getC(d.c); if (!guardOpen(c) || !need("editarItens")) return;
+    openForm({ title: "Editar dados da cesta", fields: cestaFields(c), onSubmit(v) {
+      if (S.cestas.some(x => x !== c && x.numero === v.numero)) return "Já existe uma cesta com este número.";
+      const mud = Object.keys(v).filter(k => String(c[k] ?? "") !== v[k]).map(k => `${k}: "${c[k] ?? ""}" para "${v[k]}"`);
+      if (!mud.length) return;
+      Object.assign(c, v);
+      if (c.aprovacao) { c.aprovacao = null; mud.push("aprovação dos valores desfeita"); }
+      log("Dados da cesta alterados", c.numero, mud.join("; ")); commit("Dados atualizados.");
+    } });
+  },
+  delCesta(d) {
+    const c = getC(d.c); if (!guardOpen(c) || !need("excluirCesta")) return;
+    openForm({ title: "Excluir cesta " + c.numero, desc: `${c.itens.length} itens e suas cotações serão removidos. A exclusão fica registrada na trilha.`, fields: [justField("Motivo da exclusão")], submit: "Excluir cesta", danger: true,
+      onSubmit(v) { S.cestas = S.cestas.filter(x => x !== c); log("Cesta excluída", c.numero, v.just); save(); location.hash = "#/cestas"; toast("Cesta excluída."); } });
+  },
+  dim(d) {
+    const c = getC(d.c); if (!guardOpen(c)) return;
+    if (d.k === "interna" && !need("consolidar")) return;
+    const dim = DIMS[d.k];
+    // Publicada/Publicado só pela ação Publicar, que sela o mapa.
+    const opts = dim.estados.filter(e => e !== "Publicada" && e !== "Publicado");
+    if (!opts.includes(c.sit[d.k])) opts.unshift(c.sit[d.k]);
+    openForm({ title: "Alterar " + dim.nome.toLowerCase(), desc: `Situação atual: ${c.sit[d.k]}.` + (d.k === "interna" || d.k === "documento" ? "\nA situação de publicação só é atingida pela ação Publicar." : ""),
+      fields: [{ name: "estado", label: "Nova situação", type: "select", options: opts, value: c.sit[d.k] }, justField()], submit: "Alterar situação",
+      onSubmit(v) {
+        if (v.estado === c.sit[d.k]) return "Escolha uma situação diferente da atual.";
+        log("Situação alterada", c.numero, `${dim.nome}: ${c.sit[d.k]} para ${v.estado}. Justificativa: ${v.just}`);
+        c.sit[d.k] = v.estado;
+        if (d.k === "interna" && v.estado !== "Consolidada") touch(c);
+        commit("Situação alterada.");
+      } });
+  },
+  calcCfg(d) {
+    const c = getC(d.c); if (!guardOpen(c) || !need("metodo")) return;
+    openForm({ title: "Método de cálculo", desc: "A IN 65/2021 (art. 6º) admite média, mediana ou menor preço, sempre após desconsiderar valores inexequíveis, inconsistentes e excessivamente elevados.",
+      fields: [
+        { name: "metodo", label: "Valor estimado", type: "select", options: Object.entries(METODOS), value: c.calc.metodo },
+        { name: "criterio", label: "Saneamento automático", type: "select", options: Object.entries(CRITERIOS), value: c.calc.criterio, help: "Aplicado quando há 3 ou mais preços válidos." },
+        { name: "inf", label: "Limite inferior (% da mediana)", value: c.calc.inf, inputmode: "decimal", required: true },
+        { name: "sup", label: "Limite superior (% da mediana)", value: c.calc.sup, inputmode: "decimal", required: true },
+        { name: "k", label: "Desvios-padrão (critério média ± DP)", value: String(c.calc.k).replace(".", ","), inputmode: "decimal", required: true },
+        justField()],
+      submit: "Aplicar método",
+      onSubmit(v) {
+        const inf = parseMoney(v.inf), sup = parseMoney(v.sup), k = parseMoney(v.k);
+        if (!(inf >= 0 && inf < 100)) return "O limite inferior deve ficar entre 0% e 99%.";
+        if (!(sup > 100 && sup <= 1000)) return "O limite superior deve ficar entre 101% e 1000%.";
+        if (!(k > 0 && k <= 5)) return "Use entre 0,1 e 5 desvios-padrão.";
+        const antes = calcCesta(c).total;
+        c.calc = { metodo: v.metodo, criterio: v.criterio, inf, sup, k };
+        const extra = c.aprovacao ? " Aprovação dos valores desfeita." : "";
+        c.aprovacao = null;
+        log("Método de cálculo alterado", c.numero, `${METODOS[v.metodo]}; ${CRITERIOS[v.criterio]} (${inf}%/${sup}%, k=${k}). Total de ${brl(antes)} para ${brl(calcCesta(c).total)}.${extra} Justificativa: ${v.just}`);
+        commit("Método aplicado.");
+      } });
+  },
+  addItem(d) {
+    const c = getC(d.c); if (!guardOpen(c) || !need("editarItens")) return;
+    const lastLote = c.itens.length ? c.itens[c.itens.length - 1].lote : "";
+    openForm({ title: "Novo item", fields: itemFields({ lote: lastLote }), submit: "Incluir item", onSubmit(v) {
+      const qt = parseQty(v.quantidade); if (!(qt > 0)) return "Informe uma quantidade maior que zero.";
+      const it = { id: uid(), lote: v.lote, codigo: v.codigo, descricao: v.descricao, unidade: v.unidade, quantidade: qt, justificativa: "", cotacoes: [] };
+      c.itens.push(it); UI.open.add(it.id); UI.focusItem = it.id; touch(c);
+      if (c.sit.interna === "Rascunho") c.sit.interna = "Em coleta";
+      log("Item incluído", c.numero, it.descricao); commit("Item incluído.");
+    } });
+  },
+  editItem(d) {
+    const c = getC(d.c), it = getI(c, d.i); if (!guardOpen(c) || !it || !need("editarItens")) return;
+    openForm({ title: "Editar item", fields: itemFields(it), onSubmit(v) {
+      const qt = parseQty(v.quantidade); if (!(qt > 0)) return "Informe uma quantidade maior que zero.";
+      log("Item alterado", c.numero, `${it.descricao}: ${it.quantidade} ${it.unidade} para ${qt} ${v.unidade}`);
+      Object.assign(it, { descricao: v.descricao, unidade: v.unidade, quantidade: qt, lote: v.lote, codigo: v.codigo }); touch(c); commit("Item atualizado.");
+    } });
+  },
+  delItem(d) {
+    const c = getC(d.c), it = getI(c, d.i); if (!guardOpen(c) || !it || !need("editarItens")) return;
+    openForm({ title: "Remover item", desc: `"${it.descricao}" e ${it.cotacoes.length} cotação(ões) serão removidos.`, fields: [justField("Motivo")], submit: "Remover item", danger: true,
+      onSubmit(v) { c.itens = c.itens.filter(x => x !== it); touch(c); log("Item removido", c.numero, `${it.descricao}. Motivo: ${v.just}`); commit("Item removido."); } });
+  },
+  pasteItems(d) {
+    const c = getC(d.c); if (!guardOpen(c) || !need("editarItens")) return;
+    openForm({ title: "Colar itens do Excel", desc: "Copie as colunas na ordem: descrição, unidade, quantidade, lote (opcional), código (opcional). Uma linha por item; a primeira linha pode ser o cabeçalho.",
+      fields: [{ name: "txt", label: "Itens", type: "textarea", rows: 8, required: true, placeholder: "Banana prata\tkg\t1200\tLote 1\t463428" }], submit: "Incluir itens",
+      onSubmit(v) {
+        const linhas = v.txt.split(/\r?\n/).map(l => l.split(/\t|;/).map(s => s.trim())).filter(p => p[0]);
+        const novos = [], erros = [];
+        linhas.forEach((p, i) => {
+          const qt = parseQty(p[2]);
+          if (i === 0 && !(qt > 0) && /descri/i.test(norm(p[0]))) return;
+          if (!p[1] || !(qt > 0)) { erros.push(i + 1); return; }
+          novos.push({ id: uid(), descricao: p[0], unidade: p[1], quantidade: qt, lote: p[3] || "", codigo: p[4] || "", justificativa: "", cotacoes: [] });
+        });
+        if (erros.length) return `Linha(s) ${erros.join(", ")} sem unidade ou com quantidade inválida. Nada foi incluído.`;
+        if (!novos.length) return "Nenhum item reconhecido.";
+        c.itens.push(...novos); touch(c); if (c.sit.interna === "Rascunho") c.sit.interna = "Em coleta";
+        log("Itens importados", c.numero, `${novos.length} itens colados de planilha`); commit(`${novos.length} itens incluídos.`);
+      } });
+  },
+  approveQ(d) {
+    const m = quoteRef(d); if (!m || !guardOpen(m.c) || !need("revisar")) return;
+    if (isMine(m.q)) return toast("Segregação de funções: quem lançou a cotação não pode aprová-la.", "err");
+    m.q.status = "aprovada"; m.q.aprovadoPor = cur().nome; UI.open.add(m.it.id); touch(m.c);
+    log("Cotação aprovada", m.it.descricao, `${brl(m.q.valor)} de ${m.q.origem}, lançada por ${m.q.lancadoPor}`); commit("Cotação aprovada e incluída no cálculo.");
+  },
+  excludeQ(d) {
+    const m = quoteRef(d); if (!m || !guardOpen(m.c) || !need("revisar")) return;
+    openForm({ title: "Desconsiderar cotação", desc: `${m.q.origem}: ${brl(m.q.valor)}. O valor continua visível no mapa, riscado, com o motivo.`, fields: [justField("Motivo")], submit: "Desconsiderar",
+      onSubmit(v) { m.q.exclusao = v.just; touch(m.c); log("Cotação desconsiderada", m.it.descricao, `${brl(m.q.valor)} de ${m.q.origem}. Motivo: ${v.just}`); commit("Cotação desconsiderada."); } });
+  },
+  restoreQ(d) {
+    const m = quoteRef(d); if (!m || !guardOpen(m.c) || !need("revisar")) return;
+    log("Cotação restaurada", m.it.descricao, `${brl(m.q.valor)} de ${m.q.origem}. Motivo anterior: ${m.q.exclusao}`); m.q.exclusao = null; touch(m.c); commit("Cotação restaurada.");
+  },
+  delQ(d) {
+    const m = quoteRef(d); if (!m || !guardOpen(m.c)) return;
+    if (!isMine(m.q) && !can("revisar")) return deny("revisar");
+    openForm({ title: "Remover cotação", desc: `${m.q.origem}: ${brl(m.q.valor)}. Prefira "Desconsiderar" quando o preço deve constar no processo.`, fields: [justField("Motivo")], submit: "Remover", danger: true,
+      onSubmit(v) { m.it.cotacoes = m.it.cotacoes.filter(x => x !== m.q); touch(m.c); log("Cotação removida", m.it.descricao, `${brl(m.q.valor)} de ${m.q.origem}. Motivo: ${v.just}`); commit("Cotação removida."); } });
+  },
+  approveC(d) {
+    const c = getC(d.c); if (!guardOpen(c) || !need("aprovar")) return;
+    const cc = calcCesta(c);
+    if (!c.itens.length) return toast("A cesta não tem itens.", "err");
+    if (cc.bloqueios.length) { cc.bloqueios.forEach(x => UI.open.add(x.it.id)); UI.focusItem = cc.bloqueios[0].it.id; render(); return toast(`${cc.bloqueios.length} item(ns) com pendência. Resolva antes de aprovar.`, "err"); }
+    openForm({ title: "Aprovar valores", desc: `Total estimado: ${brl(cc.total)} em ${c.itens.length} itens.\nApós a aprovação, a publicação cabe a um Expert diferente de você.`, submit: "Aprovar valores",
+      onSubmit() { c.aprovacao = { user: cur().nome, userId: cur().id, ts: new Date().toISOString() }; c.sit.interna = "Consolidada"; log("Valores aprovados", c.numero, "Total estimado " + brl(cc.total)); commit("Valores aprovados."); } });
+  },
+  publish(d) {
+    const c = getC(d.c); if (!guardOpen(c) || !need("publicar")) return;
+    if (!c.aprovacao) return toast("Aprove os valores antes de publicar.", "err");
+    if (mine(c.aprovacao, "userId", "user")) return toast("Segregação de funções: quem aprovou os valores não pode publicar o mapa.", "err");
+    const cc = calcCesta(c);
+    if (cc.bloqueios.length) return toast("Há pendências na cesta. Resolva e reaprove os valores.", "err");
+    openForm({ title: "Publicar mapa de preços", desc: `Total estimado: ${brl(cc.total)}.\nA cesta fica bloqueada e o mapa recebe um código de verificação SHA-256.`, submit: "Publicar",
+      onSubmit() {
+        const hash = mapaHash(c), trilha = S.audit.length ? S.audit[S.audit.length - 1].hash : "0".repeat(64);
+        c.publicacao = { user: cur().nome, userId: cur().id, ts: new Date().toISOString(), hash, trilha, seq: S.audit.length }; c.sit.interna = "Publicada"; c.sit.documento = "Publicado";
+        log("Mapa publicado", c.numero, `Total ${brl(cc.total)}. Código ${hash}`); commit("Mapa publicado.");
+      } });
+  },
+  reopen(d) {
+    const c = getC(d.c); if (!c || !need("reabrir")) return;
+    openForm({ title: "Reabrir cesta " + c.numero, desc: "A publicação e a aprovação serão desfeitas. O código do mapa anterior fica registrado na trilha.", fields: [justField()], submit: "Reabrir", danger: true,
+      onSubmit(v) { log("Cesta reaberta", c.numero, `Código anterior ${c.publicacao.hash}. Justificativa: ${v.just}`); c.publicacao = null; c.aprovacao = null; c.sit.interna = "Em coleta"; c.sit.documento = "Revisado"; commit("Cesta reaberta."); } });
+  },
+  csv(d) {
+    const c = getC(d.c); if (!c) return;
+    const cc = calcCesta(c);
+    const head = ["Lote", "Nº", "Código", "Descrição", "Unidade", "Quantidade", "Preços aceitos", "Preços desconsiderados", "Valor unitário estimado", "Valor total"];
+    const lines = cc.itens.map(({ it, r }, i) => [it.lote, i + 1, it.codigo, it.descricao, it.unidade, String(it.quantidade).replace(".", ","),
+      r.rows.filter(x => x.estado === "aceita").map(x => `${x.q.origem} (Inc. ${x.q.fonte}) ${csvNum(x.q.valor)}`).join(" | "),
+      r.rows.filter(x => x.estado !== "aceita").map(x => `${x.q.origem} ${csvNum(x.q.valor)} [${ESTADO_ROT[x.estado][1]}]`).join(" | "),
+      csvNum(r.estimado), csvNum(r.total)]);
+    lines.push(["", "", "", "Total", "", "", "", "", "", csvNum(cc.total)]);
+    download(`mapa-${c.numero.replace(/[^\w-]+/g, "_")}.csv`, "﻿" + [head, ...lines].map(l => l.map(csvCell).join(";")).join("\r\n"), "text/csv;charset=utf-8");
+    log("Mapa exportado (CSV)", c.numero, ""); save();
+  },
+  verify() { const ch = verifyChain(); render(); toast(ch.ok ? "Cadeia íntegra." : `Cadeia quebrada no registro ${ch.at}.`, ch.ok ? "" : "err"); },
+  auditCsv() {
+    const rows = S.audit.map(e => [e.seq, e.ts, e.user, NIVEIS[e.nivel], e.acao, e.alvo, e.detalhe, e.prev, e.hash]);
+    download("trilha-auditoria.csv", "﻿" + [["Nº", "Data e hora (UTC)", "Usuário", "Nível", "Ação", "Alvo", "Detalhe", "Código anterior", "Código"], ...rows].map(l => l.map(csvCell).join(";")).join("\r\n"), "text/csv;charset=utf-8");
+  },
+  newForn() { if (need("fornecedor")) fornForm(); },
+  editForn(d) { if (need("fornecedor")) fornForm(S.fornecedores.find(f => f.id === d.f)); },
+  delForn(d) {
+    if (!need("fornecedor")) return;
+    const f = S.fornecedores.find(x => x.id === d.f); if (!f) return;
+    const usado = S.cestas.some(c => c.itens.some(it => it.cotacoes.some(q => q.fornecedorId === f.id)));
+    if (usado) return toast("Fornecedor com cotações lançadas não pode ser excluído.", "err");
+    openForm({ title: "Excluir fornecedor", desc: f.nome, fields: [justField("Motivo")], submit: "Excluir", danger: true,
+      onSubmit(v) { S.fornecedores = S.fornecedores.filter(x => x !== f); log("Fornecedor excluído", f.nome, v.just); commit("Fornecedor excluído."); } });
+  },
+  newUser() {
+    if (!need("usuarios")) return;
+    openForm({ title: "Novo usuário", fields: [{ name: "nome", label: "Nome", required: true }, { name: "nivel", label: "Nível", type: "select", options: NIVEIS.slice(1).map((n, i) => [i + 1, `Nível ${i + 1}: ${n}`]), value: 2 }], submit: "Incluir usuário",
+      onSubmit(v) { if (S.users.some(u => norm(u.nome) === norm(v.nome))) return "Já existe um usuário com este nome."; const u = { id: uid(), nome: v.nome, nivel: +v.nivel }; S.users.push(u); log("Usuário incluído", u.nome, `Nível ${u.nivel} (${NIVEIS[u.nivel]})`); commit("Usuário incluído."); } });
+  },
+  delUser(d) {
+    if (!need("usuarios")) return;
+    const u = S.users.find(x => x.id === d.u); if (!u) return;
+    if (u.id === cur().id) return toast("Você não pode remover o próprio usuário.", "err");
+    S.users = S.users.filter(x => x !== u); log("Usuário removido", u.nome, ""); commit("Usuário removido.");
+  },
+  backup() { download(`cesta-publica-backup-${today()}.json`, JSON.stringify(S, null, 1), "application/json"); toast("Backup exportado."); },
+  restore() { if (!need("usuarios")) return; $("#restoreFile").value = ""; $("#restoreFile").click(); },
+  resetDemo() {
+    if (!need("usuarios")) return;
+    openForm({ title: "Restaurar dados de exemplo", desc: "Substitui todos os dados atuais pelo exemplo. Exporte um backup antes se quiser guardar o que existe.", submit: "Substituir pelos exemplos", danger: true,
+      onSubmit() { const tema = S.config.tema; S = seed(); S.config.tema = tema; UI.open.clear(); save(); location.hash = "#/painel"; render(); toast("Dados de exemplo restaurados."); } });
+  },
+  wipe() {
+    if (!need("usuarios")) return;
+    openForm({ title: "Apagar tudo", desc: "Remove cestas, fornecedores e a trilha deste navegador. Não há como desfazer sem um backup.", fields: [{ name: "conf", label: "Digite APAGAR para confirmar", required: true }], submit: "Apagar tudo", danger: true,
+      onSubmit(v) {
+        if (v.conf !== "APAGAR") return "Digite APAGAR em letras maiúsculas.";
+        const u = cur(); S = { v: 1, config: S.config, users: [{ ...u, nivel: 5 }], currentUserId: u.id, fornecedores: [], cestas: [], audit: [] };
+        log("Base apagada", "Sistema", "Todos os dados removidos"); UI.open.clear(); save(); location.hash = "#/painel"; render(); toast("Dados apagados.");
+      } });
+  }
+};
+// Qualquer alteração de itens ou cotações invalida a aprovação dada sobre os valores anteriores.
+function touch(c) { if (c.aprovacao) { log("Aprovação desfeita", c.numero, "Itens ou cotações alterados depois da aprovação dos valores"); c.aprovacao = null; } }
+
+function fornForm(f) {
+  openForm({ title: f ? "Editar fornecedor" : "Novo fornecedor", fields: [
+    { name: "nome", label: "Razão social", required: true, value: f && f.nome },
+    { name: "cnpj", label: "CNPJ", required: true, value: f && fmtCnpj(f.cnpj), placeholder: "00.000.000/0000-00", help: "Aceita o formato numérico e o alfanumérico." },
+    { name: "email", label: "E-mail para cotação", type: "email", value: f && f.email },
+    { name: "telefone", label: "Telefone", value: f && f.telefone },
+    { name: "cidade", label: "Cidade/UF", value: f && f.cidade }],
+    onSubmit(v) {
+      if (!cnpjValido(v.cnpj)) return "CNPJ inválido: confira os dígitos verificadores.";
+      if (v.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.email)) return "E-mail inválido.";
+      const cnpj = cnpjClean(v.cnpj);
+      if (S.fornecedores.some(x => x !== f && x.cnpj === cnpj)) return "CNPJ já cadastrado.";
+      if (f) { Object.assign(f, v, { cnpj }); log("Fornecedor alterado", f.nome, "CNPJ " + fmtCnpj(cnpj)); }
+      else { const n = { id: uid(), ...v, cnpj }; S.fornecedores.push(n); log("Fornecedor cadastrado", n.nome, "CNPJ " + fmtCnpj(cnpj)); }
+      commit(f ? "Fornecedor atualizado." : "Fornecedor cadastrado.");
+    } });
+}
+
+function quoteError(v) {
+  if (!v.origem) return ["origem", "Informe a origem do preço."];
+  if (!(money(v.valor) > 0)) return ["valor", "Informe um valor unitário maior que zero, como 12,50. Use vírgula para decimais (6,459)."];
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(v.data || "") || v.data > today()) return ["data", "Informe a data da cotação; ela não pode estar no futuro."];
+  if (!FONTES[v.fonte]) return ["fonte", "Escolha a fonte do preço."];
+  return null;
+}
+function newQuote(c, it, v) {
+  const u = cur(), f = S.fornecedores.find(x => norm(x.nome) === norm(v.origem)), auto = can("revisar");
+  const q = { id: uid(), fonte: v.fonte, origem: v.origem, fornecedorId: f ? f.id : null, valor: money(v.valor), data: v.data, ref: v.ref || "",
+    lancadoPor: u.nome, lancadoPorId: u.id, lancadoEm: new Date().toISOString(), status: auto ? "aprovada" : "pendente", aprovadoPor: auto ? u.nome : null, exclusao: null };
+  it.cotacoes.push(q);
+  log("Cotação lançada", it.descricao, `${brl(q.valor)}, inciso ${q.fonte}, ${q.origem}${auto ? "" : " (aguarda revisão)"}`);
+  return q;
+}
+const FORMS = {
+  addQ(form) {
+    const c = getC(form.dataset.c), it = getI(c, form.dataset.i); if (!guardOpen(c) || !it || !need("lancar")) return;
+    const v = Object.fromEntries([...new FormData(form)].map(([k, x]) => [k, String(x).trim()]));
+    const err = quoteError(v);
+    if (err) { const el = form.elements[err[0]]; el.setAttribute("aria-invalid", "true"); el.focus(); return toast(err[1], "err"); }
+    const q = newQuote(c, it, v); touch(c);
+    UI.open.add(it.id); commit(q.status === "pendente" ? "Cotação lançada; aguarda revisão." : "Cotação lançada.");
+    const nf = document.querySelector(`form[data-form="addQ"][data-i="${it.id}"]`); if (nf) nf.elements.origem.focus();
+  },
+  serie(form) {
+    const c = getC(form.dataset.c); if (!guardOpen(c) || !need("lancar")) return;
+    const fd = Object.fromEntries([...new FormData(form)].map(([k, x]) => [k, String(x).trim()]));
+    const head = { fonte: fd.fonte, origem: fd.origem, data: fd.data, ref: fd.ref };
+    const preenchidos = c.itens.filter(it => fd["v_" + it.id]);
+    if (!preenchidos.length) return toast("Nenhum valor preenchido.", "err");
+    for (const it of preenchidos) {
+      const err = quoteError({ ...head, valor: fd["v_" + it.id] });
+      if (err) { const el = form.elements[err[0] === "valor" ? "v_" + it.id : err[0]]; el.setAttribute("aria-invalid", "true"); el.focus(); return toast((err[0] === "valor" ? `"${it.descricao}": ` : "") + err[1] + " Nada foi salvo.", "err"); }
+    }
+    preenchidos.forEach(it => newQuote(c, it, { ...head, valor: fd["v_" + it.id] })); touch(c);
+    save(); location.hash = "#/cesta/" + c.id; toast(`${preenchidos.length} cotações lançadas de ${head.origem}.`);
+  }
+};
+const BIND = {
+  who(el) { S.currentUserId = el.value; save(); render(); toast(`Atuando como ${cur().nome}, nível ${cur().nivel} (${NIVEIS[cur().nivel]}).`); },
+  orgao(el) { const v = el.value.trim(); if (v === S.config.orgao) return; log("Órgão alterado", "Configurações", `"${S.config.orgao}" para "${v}"`); S.config.orgao = v; save(); toast("Órgão salvo."); },
+  tema(el) { S.config.tema = el.value; applyTheme(); save(); },
+  itemJust(el) {
+    const c = getC(el.dataset.c), it = getI(c, el.dataset.i); if (!c || !it || locked(c) || !can("editarItens")) return;
+    const v = el.value.trim(); if (v === (it.justificativa || "")) return;
+    it.justificativa = v; touch(c); log("Justificativa registrada", it.descricao, v || "(removida)"); commit("Justificativa salva.");
+  },
+  userLevel(el) {
+    if (!need("usuarios")) { render(); return; }
+    const u = S.users.find(x => x.id === el.dataset.u), n = +el.value;
+    if (u.nivel === 5 && n < 5 && S.users.filter(x => x.nivel === 5).length === 1) { render(); return toast("É preciso manter ao menos um usuário Expert.", "err"); }
+    log("Alçada alterada", u.nome, `Nível ${u.nivel} para ${n}`); u.nivel = n; commit("Alçada alterada.");
+  },
+  restore(el) {
+    const file = el.files[0]; if (!file) return;
+    file.text().then(txt => {
+      let d; try { d = JSON.parse(txt); } catch (e) { return toast("Arquivo não é um backup válido (JSON ilegível).", "err"); }
+      const erro = validateBackup(d);
+      if (erro) return toast("Backup recusado: " + erro, "err");
+      const ch = verifyChain(d);
+      openForm({ title: "Importar backup", desc: `${d.cestas.length} cestas, ${d.fornecedores.length} fornecedores, ${d.audit.length} registros na trilha.\n${ch.ok ? "Trilha íntegra." : "Atenção: a trilha deste arquivo está quebrada no registro " + ch.at + "."}\nOs dados atuais serão substituídos.`,
+        submit: "Substituir dados", danger: true,
+        onSubmit() { S = d; if (!S.users.some(u => u.id === S.currentUserId)) S.currentUserId = S.users[0].id; log("Backup importado", file.name, ch.ok ? "Trilha íntegra" : "Trilha quebrada no registro " + ch.at); UI.open.clear(); applyTheme(); save(); render(); toast("Backup importado."); } });
+    }).catch(() => toast("Não foi possível ler o arquivo.", "err"));
+  }
+};
+// O arquivo importado é entrada não confiável: ids, enums e números chegam a atributos HTML e ao cálculo.
+function validateBackup(d) {
+  const id = x => typeof x === "string" && /^[\w-]{1,40}$/.test(x);
+  const str = x => x == null || typeof x === "string";
+  const num = x => typeof x === "number" && isFinite(x);
+  const hex = x => typeof x === "string" && /^[0-9a-f]{64}$/.test(x);
+  const arr = Array.isArray;
+  if (!d || typeof d !== "object" || d.v !== 1) return "não é um backup da Cesta Pública (versão 1).";
+  if (!d.config || typeof d.config !== "object" || !str(d.config.orgao) || !["auto", "light", "dark"].includes(d.config.tema)) return "configuração inválida.";
+  if (!arr(d.users) || !d.users.length || !d.users.every(u => id(u.id) && typeof u.nome === "string" && Number.isInteger(u.nivel) && u.nivel >= 1 && u.nivel <= 5)) return "usuários inválidos.";
+  if (!id(d.currentUserId)) return "usuário atual inválido.";
+  if (!arr(d.fornecedores) || !d.fornecedores.every(f => id(f.id) && typeof f.nome === "string" && typeof f.cnpj === "string" && str(f.email) && str(f.telefone) && str(f.cidade))) return "fornecedores inválidos.";
+  if (!arr(d.audit) || !d.audit.every((e, i) => e.seq === i + 1 && typeof e.ts === "string" && typeof e.user === "string" && Number.isInteger(e.nivel) && [e.acao, e.alvo, e.detalhe].every(x => typeof x === "string") && hex(e.prev) && hex(e.hash))) return "trilha de auditoria inválida.";
+  if (!arr(d.cestas)) return "cestas inválidas.";
+  for (const c of d.cestas) {
+    if (!id(c.id) || ![c.numero, c.objeto, c.unidade, c.responsavel].every(x => typeof x === "string") || !str(c.processo) || !isDate(c.dataBase)) return `cesta ${c.numero} com dados básicos inválidos.`;
+    if (!c.calc || !METODOS[c.calc.metodo] || !CRITERIOS[c.calc.criterio] || ![c.calc.inf, c.calc.sup, c.calc.k].every(num)) return `cesta ${c.numero} com método inválido.`;
+    if (!c.sit || !Object.keys(DIMS).every(k => DIMS[k].estados.includes(c.sit[k]))) return `cesta ${c.numero} com situação inválida.`;
+    if (c.aprovacao != null && (typeof c.aprovacao.user !== "string" || typeof c.aprovacao.ts !== "string")) return `cesta ${c.numero} com aprovação inválida.`;
+    if (c.publicacao != null && (typeof c.publicacao.user !== "string" || !hex(c.publicacao.hash))) return `cesta ${c.numero} com publicação inválida.`;
+    if (!arr(c.itens)) return `cesta ${c.numero} sem lista de itens.`;
+    for (const it of c.itens) {
+      if (!id(it.id) || ![it.descricao, it.unidade].every(x => typeof x === "string") || !str(it.lote) || !str(it.codigo) || !str(it.justificativa) || !(num(it.quantidade) && it.quantidade > 0) || !arr(it.cotacoes)) return `item inválido na cesta ${c.numero}.`;
+      for (const q of it.cotacoes)
+        if (!id(q.id) || !FONTES[q.fonte] || typeof q.origem !== "string" || !(num(q.valor) && q.valor > 0) || !isDate(q.data) || !["aprovada", "pendente"].includes(q.status) || typeof q.lancadoPor !== "string" || !str(q.exclusao) || !str(q.ref)) return `cotação inválida em "${it.descricao}".`;
+    }
+  }
+  return null;
+}
+const LIVE = {
+  cestasQ(el) { UI.cestasQ = el.value; $("#cestasBody").innerHTML = cestasRows(); },
+  auditQ(el) { UI.auditQ = el.value; $("#auditBody").innerHTML = auditRows(); }
+};
+
+/* ============ Busca rápida ============ */
+function paletteSource() {
+  const out = NAV.map(n => ({ t: n.label, s: "Ir para a seção", h: "#/" + n.v }));
+  S.cestas.forEach(c => {
+    out.push({ t: c.objeto, s: `Cesta ${c.numero}`, h: "#/cesta/" + c.id });
+    out.push({ t: `Mapa de preços ${c.numero}`, s: c.objeto, h: `#/cesta/${c.id}/mapa` });
+    c.itens.forEach(it => out.push({ t: it.descricao, s: `Item da cesta ${c.numero}`, h: "#/cesta/" + c.id, item: it.id }));
+  });
+  S.fornecedores.forEach(f => out.push({ t: f.nome, s: "Fornecedor, CNPJ " + fmtCnpj(f.cnpj), h: "#/fornecedores" }));
+  return out;
+}
+function paletteRender(q) {
+  const words = norm(q).split(/\s+/).filter(Boolean);
+  UI.palItems = paletteSource().filter(x => words.every(w => norm(x.t + " " + x.s).includes(w))).slice(0, 14);
+  UI.pal = 0;
+  $("#cmdList").innerHTML = UI.palItems.length ? UI.palItems.map((x, i) => `<li role="presentation"><button type="button" role="option" id="po${i}" data-pi="${i}" aria-selected="${i === 0}"><span>${esc(x.t)}</span><small>${esc(x.s)}</small></button></li>`).join("")
+    : `<li class="empty" role="presentation">Nada encontrado para "${esc(q)}".</li>`;
+  if (UI.palItems.length) $("#cmdIn").setAttribute("aria-activedescendant", "po0"); else $("#cmdIn").removeAttribute("aria-activedescendant");
+}
+function paletteMove(step) {
+  if (!UI.palItems.length) return;
+  UI.pal = (UI.pal + step + UI.palItems.length) % UI.palItems.length;
+  document.querySelectorAll("#cmdList [data-pi]").forEach(b => b.setAttribute("aria-selected", String(+b.dataset.pi === UI.pal)));
+  const el = document.getElementById("po" + UI.pal); el.scrollIntoView({ block: "nearest" }); $("#cmdIn").setAttribute("aria-activedescendant", el.id);
+}
+function paletteChoose(i) {
+  const x = UI.palItems[i]; if (!x) return;
+  $("#cmd").close();
+  if (x.item) { UI.open.add(x.item); UI.focusItem = x.item; }
+  if (location.hash === x.h) render(); else location.hash = x.h;
+}
+function openPalette() { const d = $("#cmd"); if (d.open) return; d.showModal(); $("#cmdIn").value = ""; paletteRender(""); $("#cmdIn").focus(); }
+
+/* ============ Eventos ============ */
+document.addEventListener("click", e => {
+  const pi = e.target.closest("[data-pi]"); if (pi) return paletteChoose(+pi.dataset.pi);
+  const el = e.target.closest("[data-act]"); if (!el || el.disabled) return;
+  const fn = ACT[el.dataset.act]; if (!fn) return;
+  e.preventDefault(); fn(el.dataset, el);
+});
+document.addEventListener("submit", e => { const f = e.target.closest("form[data-form]"); if (!f) return; e.preventDefault(); FORMS[f.dataset.form](f); });
+document.addEventListener("change", e => { const b = e.target.dataset && e.target.dataset.bind; if (b && BIND[b]) BIND[b](e.target); });
+document.addEventListener("input", e => {
+  const b = e.target.dataset && e.target.dataset.live; if (b && LIVE[b]) LIVE[b](e.target);
+  if (e.target.id === "cmdIn") paletteRender(e.target.value);
+  if (e.target.getAttribute && e.target.getAttribute("aria-invalid") === "true") e.target.removeAttribute("aria-invalid");
+});
+document.addEventListener("toggle", e => { const d = e.target; if (d.matches && d.matches("details.item")) d.open ? UI.open.add(d.dataset.item) : UI.open.delete(d.dataset.item); }, true);
+document.addEventListener("keydown", e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); if (!$("#dlg").open) openPalette(); return; }
+  if (e.target.id === "cmdIn") {
+    if (e.key === "ArrowDown") { e.preventDefault(); paletteMove(1); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); paletteMove(-1); }
+    else if (e.key === "Enter") { e.preventDefault(); paletteChoose(UI.pal); }
+    return;
+  }
+  // Enter no lançamento em série avança para o próximo item em vez de enviar.
+  if (e.key === "Enter" && e.target.matches("[data-serie]")) {
+    e.preventDefault();
+    const all = [...document.querySelectorAll("[data-serie]")], next = all[all.indexOf(e.target) + 1];
+    if (next) next.focus(); else e.target.form.querySelector('button[type="submit"]').focus();
+  }
+});
+$("#cmd").addEventListener("click", e => { if (e.target.id === "cmd") $("#cmd").close(); });
+$("#dlg").addEventListener("click", e => { if (e.target.id === "dlg") $("#dlg").close(); });
+window.addEventListener("hashchange", () => { const keep = UI.focusItem; render(); if (!keep) { $("#view").focus({ preventScroll: true }); window.scrollTo(0, 0); } });
+// Diálogos abertos guardam referências ao estado antigo: fecha antes de trocar S.
+window.addEventListener("storage", e => { if (e.key === LS_KEY) { ["#dlg", "#cmd"].forEach(s => { if ($(s).open) $(s).close(); }); S = load(); render(); toast("Dados atualizados em outra aba."); } });
+
+/* ============ Autoteste (rode CP.selfTest() no console) ============ */
+function selfTest() {
+  const ok = [], fail = [];
+  const t = (name, cond) => (cond ? ok : fail).push(name);
+  t("sha256 abc", sha256("abc") === "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+  t("sha256 vazio", sha256("") === "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+  t("sha256 dois blocos", sha256("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq") === "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1");
+  t("parseMoney", parseMoney("1.234,56") === 1234.56 && parseMoney("R$ 7,5") === 7.5 && parseMoney("6.45") === 6.45 && parseMoney("1,234.56") === 1234.56 && isNaN(parseMoney("6.459")) && isNaN(parseMoney("abc")) && isNaN(parseMoney("-5")));
+  t("valor com 3 casas", money("6,459") === 6.459 && !(money("0,00001") > 0));
+  t("quantidade com milhar", parseQty("1.200") === 1200 && parseQty("2,5") === 2.5);
+  t("round2 decimal", round2(10.075) === 10.08 && round2(8.345) === 8.35 && round2(1.005) === 1.01);
+  t("csv neutraliza fórmula", csvCell("=HYPERLINK(1)") === '"\'=HYPERLINK(1)"' && csvCell("abc") === '"abc"');
+  t("backup recusa id malicioso", validateBackup(Object.assign(JSON.parse(JSON.stringify(S)), { currentUserId: 'x"><img src=x onerror=alert(1)>' })) !== null && validateBackup(JSON.parse(JSON.stringify(S))) === null);
+  t("cnpj numérico", cnpjValido("11.222.333/0001-81") && !cnpjValido("11.222.333/0001-82") && !cnpjValido("11111111111111"));
+  t("cnpj alfanumérico", cnpjValido("12.ABC.345/01DE-35") && !cnpjValido("12.ABC.345/01DE-36"));
+  const st = stats([10, 11, 12]);
+  t("stats", st.mean === 11 && st.med === 11 && st.sd === 1);
+  const mk = (vals, calc, extra = {}) => calcItem({ quantidade: 10, justificativa: extra.just || "", cotacoes: vals.map((v, i) => ({ id: "q" + i, fonte: extra.fonte || "I", origem: "o" + i, valor: v, data: extra.data || "2026-01-01", status: "aprovada", exclusao: null })) },
+    { dataBase: "2026-01-10", calc: Object.assign({ metodo: "media", criterio: "mediana", k: 1, inf: 70, sup: 130 }, calc) });
+  const a = mk([10, 11, 12, 30]);
+  t("saneamento exclui excessivo", a.st.n === 3 && a.rows[3].estado === "excessivo" && a.estimado === 11 && a.total === 110);
+  const b = mk([6.05, 6.19, 6.12, 3.1], { metodo: "mediana" });
+  t("saneamento exclui inexequível", b.rows[3].estado === "inexequivel" && b.estimado === 6.12);
+  const c = mk([10, 11, 30], { criterio: "dp" });
+  t("critério média ± DP", c.rows[2].estado === "excessivo" && c.estimado === 10.5);
+  t("menos de 3 bloqueia sem justificativa", mk([10, 11]).bloqueia && !mk([10, 11], {}, { just: "mercado restrito" }).bloqueia);
+  const v = mk([10, 11, 12], {}, { fonte: "IV", data: "2025-06-01" });
+  t("prazo de 6 meses do inciso IV", v.rows.every(r => r.estado === "vencida") && v.estimado === null);
+  t("limite exato de 6 meses aceito", mk([10, 11, 12], {}, { fonte: "IV", data: "2025-07-10" }).st.n === 3 && mk([10, 11, 12], {}, { fonte: "IV", data: "2025-07-09" }).st.n === 0);
+  t("data inválida não entra no cálculo", mk([10, 11, 12], {}, { data: "2026-13-45" }).st.n === 0);
+  t("menor preço", mk([10, 11, 12], { metodo: "menor" }).estimado === 10);
+  t("arredondamento", mk([1.005, 1.005, 1.005]).estimado === 1.01);
+  const D = { audit: [] }, U = { nome: "T", nivel: 5 };
+  appendLog(D, U, "a", "b", "c"); appendLog(D, U, "d", "e", "f");
+  t("cadeia íntegra", verifyChain(D).ok);
+  D.audit[0].detalhe = "adulterado";
+  t("cadeia detecta adulteração", !verifyChain(D).ok && verifyChain(D).at === 1);
+  return { ok: ok.length, fail };
+}
+window.CP = { selfTest };
+
+/* ============ Início ============ */
+S = load();
+applyTheme();
+save();
+render();
+</script>
+</body>
+</html>

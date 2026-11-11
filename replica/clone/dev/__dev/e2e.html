@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>E2E do shell</title>
+    <style>
+      body { font: 14px/1.5 system-ui, sans-serif; margin: 16px; }
+      table { border-collapse: collapse; width: 100%; }
+      td, th { border: 1px solid #ccc; padding: 4px 8px; text-align: left; vertical-align: top; }
+      .ok { color: #1f7a4d; font-weight: 700; }
+      .fail { color: #b42318; font-weight: 700; }
+      iframe { width: 800px; height: 500px; border: 1px solid #999; }
+    </style>
+  </head>
+  <body>
+    <h1>E2E do shell — <span id="sum">rodando…</span></h1>
+    <table>
+      <thead><tr><th>caso</th><th>resultado</th><th>detalhe</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div id="stage"></div>
+    <script>
+      // Harness E2E (overlay de dev). Carrega o shell REAL em iframes de mesma
+      // origem — um cenário por vez — e verifica DOM + API pública.
+      (function () {
+        var results = [];
+        window.__e2e = { done: false, results: results };
+
+        function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+        async function until(fn, ms) {
+          var t0 = Date.now();
+          while (Date.now() - t0 < ms) { try { var v = fn(); if (v) return v; } catch (e) {} await sleep(50); }
+          return fn();
+        }
+        function key(win, target) {
+          var e = new win.KeyboardEvent('keydown', { code: 'Tab', key: 'Tab', bubbles: true, cancelable: true });
+          target.dispatchEvent(e);
+          return e.defaultPrevented;
+        }
+        async function open(query) {
+          var stage = document.getElementById('stage');
+          stage.innerHTML = '';
+          var f = document.createElement('iframe');
+          f.src = '/' + query;
+          stage.appendChild(f);
+          await new Promise(function (r) { f.onload = r; });
+          var w = f.contentWindow;
+          var errors = [];
+          var orig = w.console.error.bind(w.console);
+          w.console.error = function () { errors.push([].join.call(arguments, ' ')); orig.apply(null, arguments); };
+          w.addEventListener('error', function (e) { if (e.message) errors.push(e.message); });
+          return { f: f, w: w, d: f.contentDocument, errors: errors };
+        }
+        async function run(id, fn) {
+          var ok = false, detail = '';
+          try { detail = await fn(); ok = true; } catch (e) { detail = e.message; }
+          results.push({ id: id, ok: ok, detail: String(detail) });
+          var tr = document.createElement('tr');
+          tr.innerHTML = '<td></td><td class="' + (ok ? 'ok' : 'fail') + '">' + (ok ? 'passou' : 'falhou') + '</td><td></td>';
+          tr.cells[0].textContent = id; tr.cells[2].textContent = String(detail);
+          document.getElementById('rows').appendChild(tr);
+        }
+        function editorReady(p) {
+          if (p.w.GestaoBoot.state !== "ready") return false;
+          var fr = p.d.querySelector("iframe[data-lexical]");
+          var rec = fr && fr.contentWindow && fr.contentWindow.__received;
+          return !!(rec && rec.length);
+        }
+        function expect(cond, msg) { if (!cond) throw new Error(msg); }
+
+        (async function () {
+          await run('F01-H1 boot normal termina em ready e remove o loader', async function () {
+            var p = await open('?sim=ok');
+            var ready = await until(function () { return p.w.GestaoBoot.state === 'ready' && !p.d.getElementById('gp-boot'); }, 6000);
+            expect(ready, 'estado=' + p.w.GestaoBoot.state);
+            expect(p.d.body.getAttribute('aria-busy') === 'false', 'aria-busy não liberado');
+            var t = p.w.GestaoBoot.timings();
+            expect(t.firstFrame > 0 && t.engine > 0 && t.app > 0, 'timings incompletos ' + JSON.stringify(t));
+            expect(p.errors.length === 0, 'console.error: ' + p.errors.join(' | '));
+            return 'timings ' + JSON.stringify(t);
+          });
+
+          await run('F01-E1 conexão lenta mostra aviso e depois conclui', async function () {
+            var p = await open('?sim=slow&gpDebug=1&gpSlow=400');
+            var slow = await until(function () { return p.w.GestaoBoot.state === 'slow'; }, 3000);
+            expect(slow, 'não entrou em slow');
+            var hint = p.d.getElementById('gp-boot-hint');
+            expect(!hint.hidden && /demorando/.test(hint.textContent), 'aviso não visível');
+            var ready = await until(function () { return p.w.GestaoBoot.state === 'ready'; }, 15000);
+            expect(ready, 'não concluiu');
+            return 'aviso: "' + hint.textContent + '"';
+          });
+
+          await run('F01-E2 base href substituído e caminhos relativos', async function () {
+            var p = await open('?sim=hang');
+            expect(p.d.querySelector('base').getAttribute('href') === '/', 'base=' + p.d.querySelector('base').getAttribute('href'));
+            var srcs = [].map.call(p.d.querySelectorAll('script[src]'), function (s) { return s.getAttribute('src'); });
+            expect(srcs.every(function (s) { return s.charAt(0) !== '/'; }), 'caminho absoluto: ' + srcs.join(','));
+            expect(!p.d.documentElement.classList.contains('no-js'), 'no-js não removido');
+            return srcs.join(', ');
+          });
+
+          await run('F01-N1 falha do motor mostra erro e foca o título', async function () {
+            var p = await open('?sim=fail');
+            var err = await until(function () { return p.w.GestaoBoot.state === 'error'; }, 4000);
+            expect(err, 'sem erro');
+            expect(p.d.activeElement.id === 'gp-boot-error-title', 'foco em ' + p.d.activeElement.id);
+            expect(!p.d.getElementById('gp-boot-error').hidden, 'cartão oculto');
+            return p.d.getElementById('gp-boot-error-title').textContent;
+          });
+
+          await run('F01-N2 script essencial 404 mostra erro de download', async function () {
+            var p = await open('?sim=404');
+            var err = await until(function () { return p.w.GestaoBoot.state === 'error'; }, 4000);
+            expect(err, 'sem erro');
+            var d = p.d.getElementById('gp-boot-detail').textContent;
+            expect(/^\[script\]/.test(d), d);
+            return d;
+          });
+
+          await run('F01-N3 travamento cai no timeout; quadro tardio recupera', async function () {
+            var p = await open('?sim=hang&gpDebug=1&gpSlow=300&gpTimeout=1000');
+            var err = await until(function () { return p.w.GestaoBoot.state === 'error'; }, 3000);
+            expect(err, 'sem timeout');
+            expect(/^\[timeout\]/.test(p.d.getElementById('gp-boot-detail').textContent), 'tipo errado');
+            p.w.dispatchEvent(new p.w.Event('flutter-first-frame'));
+            expect(p.w.GestaoBoot.state === 'ready', 'não recuperou');
+            return 'timeout → ready';
+          });
+
+          await run('F01-N4 detalhe técnico é texto, nunca HTML', async function () {
+            var p = await open('?sim=hang');
+            p.w.GestaoBoot.fail(new Error('<img src=x onerror="window.__xss=1">'));
+            await sleep(100);
+            expect(!p.w.__xss, 'HTML executado');
+            expect(p.d.querySelectorAll('#gp-boot-detail img').length === 0, 'img injetada');
+            return 'payload exibido como texto';
+          });
+
+          await run('F02-H1 localhost mantém o favicon padrão', async function () {
+            var p = await open('?sim=hang');
+            expect(p.w.GestaoBoot.tenant === null, 'tenant=' + p.w.GestaoBoot.tenant);
+            expect(/\/favicon\.ico$/.test(p.d.getElementById('favicon').href), p.d.getElementById('favicon').href);
+            return 'tenant=null, favicon.ico';
+          });
+
+          await run('F03-H1 mensagem enviada antes do editor é entregue', async function () {
+            var p = await open('?sim=ok');
+            expect(await until(function () { return p.w.__queuedResult; }, 4000) === 'queued', 'não enfileirou');
+            var got = await until(function () {
+              var fr = p.d.querySelector('iframe[data-lexical]');
+              return fr && fr.contentWindow.__received && fr.contentWindow.__received.length;
+            }, 6000);
+            expect(got === 1, 'editor recebeu ' + got);
+            return 'queued → entregue após lexical:ready';
+          });
+
+          await run('F03-H2 ida e volta com acentos e emoji', async function () {
+            var p = await open('?sim=ok');
+            expect(await until(function () { return editorReady(p); }, 10000), "editor não ficou pronto");
+            var replies = [];
+            p.w.addEventListener('lexical-message', function (e) { replies.push(e.detail); });
+            var text = 'Licitação nº 14.133 — ação ✅ 👋';
+            var r = p.w.sendToLexical('setText', text);
+            expect(r === 'sent', 'retorno ' + r);
+            var echo = await until(function () { return replies.filter(function (m) { return m.type === 'lexical:changed'; })[0]; }, 2000);
+            expect(echo && echo.payload === text, 'eco ' + JSON.stringify(echo));
+            return 'eco íntegro';
+          });
+
+          await run('F03-E1 payload longo (200 mil caracteres)', async function () {
+            var p = await open('?sim=ok');
+            expect(await until(function () { return editorReady(p); }, 10000), "editor não ficou pronto");
+            var big = new Array(200001).join('a');
+            expect(p.w.sendToLexical('setText', big) === 'sent', 'não enviou');
+            var ed = p.d.querySelector('iframe[data-lexical]').contentWindow;
+            var ok = await until(function () { return ed.__received.some(function (m) { return m.payload === big; }); }, 3000);
+            expect(ok, 'não chegou');
+            return 'ok';
+          });
+
+          await run('F03-N1 mensagem forjada por outra janela é ignorada', async function () {
+            var p = await open('?sim=ok');
+            await until(function () { return p.w.GestaoBoot.state === 'ready'; }, 6000);
+            var seen = [];
+            p.w.GestaoBoot.lexical.on('*', function (m) { seen.push(m.type); });
+            p.w.postMessage({ type: 'forjada' }, '*'); // source = a própria janela, não o editor
+            await sleep(200);
+            expect(seen.indexOf('forjada') < 0, 'aceitou mensagem forjada');
+            return 'ignorada';
+          });
+
+          await run('F03-N2 sem editor: sendToLexical não lança', async function () {
+            var p = await open('?sim=hang');
+            var r;
+            try { r = p.w.sendToLexical('setText', 'x'); } catch (e) { r = 'LANÇOU ' + e.message; }
+            expect(r === 'queued', r);
+            return r;
+          });
+
+          await run('F04-H1 Tab: bloqueia no canvas; libera com leitor de tela e no cartão de erro', async function () {
+            var p = await open('?sim=ok');
+            await until(function () { return p.w.GestaoBoot.state === 'ready'; }, 6000);
+            var view = p.d.querySelector('flutter-view');
+            var canvas = key(p.w, view);
+            var host = p.d.createElement('flt-semantics-host');
+            host.appendChild(p.d.createElement('flt-semantics'));
+            p.d.body.appendChild(host);
+            var sr = key(p.w, view);
+            host.remove();
+            expect(canvas === true, 'não bloqueou no canvas');
+            expect(sr === false, 'bloqueou com leitor de tela');
+            var q = await open('?sim=fail');
+            await until(function () { return q.w.GestaoBoot.state === 'error'; }, 4000);
+            var inCard = key(q.w, q.d.querySelector('[data-gp-action="retry"]'));
+            expect(inCard === false, 'bloqueou no cartão de erro');
+            return 'canvas=bloqueia, leitor=libera, cartão=libera';
+          });
+
+          var passed = results.filter(function (r) { return r.ok; }).length;
+          document.getElementById('sum').textContent = passed + '/' + results.length + ' passaram';
+          document.getElementById('stage').innerHTML = '';
+          window.__e2e.done = true;
+        })();
+      })();
+    </script>
+  </body>
+</html>

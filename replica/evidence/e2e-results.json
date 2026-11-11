@@ -1,0 +1,26 @@
+{
+  "runner": "replica/clone/dev/__dev/e2e.html (harness no navegador, shell real em iframes de mesma origem)",
+  "browser": "Chromium do painel de navegador embutido",
+  "server": "node replica/tools/serve.mjs replica/clone/web 5502 replica/clone/dev",
+  "date": "2026-10-17",
+  "runs": [
+    { "run": 1, "passed": 13, "total": 14, "failed": ["F03-E1 — falha do HARNESS (predicado de espera sem guarda lia __received.length com o iframe ainda em about:blank). Reproduzido isolado no shell: 200 mil caracteres enviados ('sent') e entregues. Harness corrigido com editorReady()."] },
+    { "run": 2, "passed": 14, "total": 14, "failed": [] }
+  ],
+  "results_run_2": [
+    ["PASS", "F01-H1 boot normal termina em ready e remove o loader", "timings {\"bootstrap\":416,\"engine\":918,\"app\":1784,\"firstFrame\":5867}"],
+    ["PASS", "F01-E1 conexão lenta mostra aviso e depois conclui", "aviso: \"Está demorando mais que o normal. Verifique sua conexão.\""],
+    ["PASS", "F01-E2 base href substituído e caminhos relativos", "boot/shell.js, assets/packages/flutter_inappwebview_web/assets/web/web_support.js, flutter_bootstrap.js"],
+    ["PASS", "F01-N1 falha do motor mostra erro e foca o título", "Falha ao iniciar o sistema"],
+    ["PASS", "F01-N2 script essencial 404 mostra erro de download", "[script] Falha ao carregar main.dart.js"],
+    ["PASS", "F01-N3 travamento cai no timeout; quadro tardio recupera", "timeout → ready"],
+    ["PASS", "F01-N4 detalhe técnico é texto, nunca HTML", "payload exibido como texto"],
+    ["PASS", "F02-H1 localhost mantém o favicon padrão", "tenant=null, favicon.ico"],
+    ["PASS", "F03-H1 mensagem enviada antes do editor é entregue", "queued → entregue após lexical:ready"],
+    ["PASS", "F03-H2 ida e volta com acentos e emoji", "eco íntegro"],
+    ["PASS", "F03-E1 payload longo (200 mil caracteres)", "ok"],
+    ["PASS", "F03-N1 mensagem forjada por outra janela é ignorada", "ignorada"],
+    ["PASS", "F03-N2 sem editor: sendToLexical não lança", "queued"],
+    ["PASS", "F04-H1 Tab: bloqueia no canvas; libera com leitor de tela e no cartão de erro", "canvas=bloqueia, leitor=libera, cartão=libera"]
+  ]
+}

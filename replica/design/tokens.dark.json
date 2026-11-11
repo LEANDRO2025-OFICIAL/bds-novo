@@ -1,0 +1,29 @@
+{
+  "_about": "Tokens do tema ESCURO do shell. Papéis medidos do original (bg #212121, text #fff, acento #00bcd4 — 7.01:1, mantido). Verificar: python contrast.py tokens.dark.json",
+  "color": {
+    "bg": "#212121",
+    "surface": "#2b2b2b",
+    "border": "#3d3d3d",
+    "border-input": "#8a8a8a",
+    "text": "#ffffff",
+    "text-muted": "#b8b8b8",
+    "accent": "#00bcd4",
+    "on-accent": "#062a30",
+    "danger": "#ff8a80",
+    "success": "#6fcf97"
+  },
+  "pairs": [
+    ["text", "bg"],
+    ["text", "surface"],
+    ["text-muted", "bg"],
+    ["text-muted", "surface"],
+    ["on-accent", "accent"],
+    ["accent", "bg"],
+    ["accent", "surface"],
+    ["danger", "bg"],
+    ["danger", "surface"],
+    ["success", "bg"],
+    ["border-input", "bg", "ui"],
+    ["accent", "bg", "ui"]
+  ]
+}

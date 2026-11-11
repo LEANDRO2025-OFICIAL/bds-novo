@@ -1,0 +1,48 @@
+▶ resolveTenant (estratégia compat)
+  ✔ mantém o mesmo rótulo do original quando ele é um nome de cliente (1.4951ms)
+  ✔ devolve null onde o original gerava um favicon inexistente (0.4529ms)
+  ✔ normaliza caixa, ponto final e rejeita rótulos inválidos (0.2708ms)
+  ✔ estratégia off nunca resolve (0.2571ms)
+  ✔ monta o href do favicon a partir do padrão (22.3285ms)
+✔ resolveTenant (estratégia compat) (39.2554ms)
+▶ readConfig
+  ✔ usa os padrões quando não há atributos (0.6291ms)
+  ✔ ignora valores inválidos e limita números (0.3473ms)
+  ✔ aceita overrides de tempo só com gpDebug=1 (0.2726ms)
+  ✔ preserva o comportamento original quando configurado (1.1256ms)
+✔ readConfig (2.8991ms)
+▶ shouldTrapTab
+  ✔ app: bloqueia no canvas, libera com leitor de tela e fora do app (0.4346ms)
+  ✔ always reproduz o original, menos nos botões do shell (0.1787ms)
+  ✔ never e outras teclas nunca bloqueiam (0.1614ms)
+✔ shouldTrapTab (1.0355ms)
+▶ createBootMachine
+  ✔ loading → slow → error por timeout (0.7795ms)
+  ✔ primeiro quadro encerra timers e vence até um erro anterior (1.9151ms)
+  ✔ fases só avançam e são ignoradas depois de ready (0.3422ms)
+  ✔ fail guarda o tipo e um detalhe legível (0.2968ms)
+  ✔ timings relativos ao início (0.223ms)
+✔ createBootMachine (3.8807ms)
+▶ deriveTargetOrigin
+  ✔ nunca devolve "*" (0.3167ms)
+✔ deriveTargetOrigin (0.4615ms)
+▶ createLexicalBridge
+  ✔ envia {type, payload} com a origem exata do iframe (0.7064ms)
+  ✔ sem iframe: enfileira e entrega no handshake lexical:ready (0.4994ms)
+  ✔ ignora mensagens de outra origem ou de outra janela (0.3217ms)
+  ✔ listeners por tipo, unsubscribe e CustomEvent lexical-message (0.3399ms)
+  ✔ nunca lança: payload não clonável vira "dropped" (0.3809ms)
+  ✔ fallback legado usa window.frames[0] do próprio documento e a própria origem (0.2023ms)
+  ✔ origem opaca (data:) descarta a mensagem (0.1366ms)
+✔ createLexicalBridge (2.98ms)
+▶ CRITICAL_SCRIPT_RE
+  ✔ marca como críticos só os scripts de boot do Flutter (0.4711ms)
+✔ CRITICAL_SCRIPT_RE (0.5766ms)
+ℹ tests 26
+ℹ suites 7
+ℹ pass 26
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 412.2438

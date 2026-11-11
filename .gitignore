@@ -1,0 +1,22 @@
+# Logs
+*.log
+.remember/logs/
+.remember/*.log
+
+# Packages / builds
+node_modules/
+dist/
+build/
+*.zip
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/

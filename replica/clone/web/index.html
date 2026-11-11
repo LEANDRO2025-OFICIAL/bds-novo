@@ -1,0 +1,77 @@
+<!doctype html>
+<html
+  lang="pt-BR"
+  class="no-js"
+  data-app-name="Gestão Pública"
+  data-boot-slow-ms="8000"
+  data-boot-timeout-ms="45000"
+  data-tab-policy="app"
+  data-caret-policy="flutter"
+  data-tenant-strategy="compat"
+  data-tenant-favicon="favicon-{tenant}.ico"
+  data-lexical-selector='iframe[data-lexical], iframe[name="lexical"]'
+  data-lexical-legacy-fallback="true"
+>
+  <head>
+    <!--
+      O `flutter build web --base-href /caminho/` substitui o token abaixo.
+      Todos os caminhos deste arquivo são relativos para respeitá-lo.
+    -->
+    <base href="$FLUTTER_BASE_HREF" />
+
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Gestão Pública</title>
+    <meta name="description" content="Sistema de Gestão Pública." />
+
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f2f0f1" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#212121" />
+
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Gestão Pública" />
+    <link rel="apple-touch-icon" href="icons/Icon-192.png" />
+
+    <link rel="manifest" href="manifest.json" />
+    <link id="favicon" rel="icon" href="favicon.ico" sizes="any" />
+
+    <link rel="stylesheet" href="boot/shell.css" />
+  </head>
+
+  <body aria-busy="true">
+    <div id="gp-boot" class="gp-boot loading" data-state="loading">
+      <div class="gp-boot__panel">
+        <p class="gp-boot__brand" data-gp-app-name>Gestão Pública</p>
+        <div class="gp-boot__spinner" aria-hidden="true"></div>
+        <p id="gp-boot-status" class="gp-boot__status" role="status" aria-live="polite">Carregando…</p>
+        <p id="gp-boot-hint" class="gp-boot__hint" aria-live="polite" hidden></p>
+
+        <section id="gp-boot-error" class="gp-boot__error" aria-labelledby="gp-boot-error-title" hidden>
+          <h1 id="gp-boot-error-title" tabindex="-1"></h1>
+          <p id="gp-boot-error-text"></p>
+          <div class="gp-boot__actions">
+            <button type="button" class="gp-btn gp-btn--primary" data-gp-action="retry">Tentar novamente</button>
+            <button type="button" class="gp-btn gp-btn--secondary" data-gp-action="clear-cache">
+              Limpar cache e recarregar
+            </button>
+          </div>
+          <details>
+            <summary>Detalhes técnicos</summary>
+            <pre id="gp-boot-detail"></pre>
+          </details>
+        </section>
+
+        <noscript>
+          <p class="gp-boot__noscript">Ative o JavaScript no navegador para usar o Gestão Pública.</p>
+        </noscript>
+      </div>
+    </div>
+
+    <!-- Síncrono: registra os listeners de boot antes de o Flutter começar. -->
+    <script src="boot/shell.js"></script>
+
+    <script src="assets/packages/flutter_inappwebview_web/assets/web/web_support.js" defer></script>
+    <script src="flutter_bootstrap.js" async></script>
+  </body>
+</html>

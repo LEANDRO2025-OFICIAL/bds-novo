@@ -1,0 +1,5 @@
+data/
+usuarios.txt
+node_modules/
+.claude/
+*.log

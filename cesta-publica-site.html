@@ -1,0 +1,2046 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cesta Pública — Sistema de Gestão de Cesta de Preços</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+/* Skip artifact shell — fixed styles served beside every artifact.
+   Tokens, utilities and components (basecoat 1.0 markup, no CDN); artifacts
+   override --accent for their own identity. */
+:root {
+  color-scheme: light dark;
+  --accent: #2563eb;
+  --accent-contrast: #ffffff;
+  --accent-text: color-mix(in srgb, var(--accent) 72%, #000);
+  --bg: #f8f9fb;
+  --surface: #ffffff;
+  --text: #14171f;
+  --text-muted: #5b6472;
+  --border: rgba(20, 23, 31, 0.10);
+  --radius: 10px;
+  --shadow: 0 1px 3px rgba(20, 23, 31, 0.08);
+  --space: 16px;
+  --success: #0a7a35;
+  --danger: #c0262d;
+  --warning: #8a5300;
+}
+/* Theme resolution. Without data-theme the viewer's system preference decides,
+   as it always did. With it, the artifact's own choice wins in BOTH directions:
+   a page that hardcodes one palette must not be handed the opposite set of
+   tokens by the machine it happens to be opened on. The dark values appear
+   twice because a media query cannot be folded into a selector list.
+   The attribute sits inside :where() so these blocks keep the specificity of a
+   bare :root — the page's own <style> is linked after this file and must go on
+   overriding any token it wants, exactly as it could before. */
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    --accent-text: color-mix(in srgb, var(--accent) 78%, #fff);
+    --bg: #101318;
+    --surface: #181c23;
+    --text: #eef1f6;
+    --text-muted: #9aa4b2;
+    --border: rgba(238, 241, 246, 0.12);
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    --success: #4ade80;
+    --danger: #f87171;
+    --warning: #fbbf24;
+  }
+}
+:root:where([data-theme="dark"]) {
+  color-scheme: dark;
+  --accent-text: color-mix(in srgb, var(--accent) 78%, #fff);
+  --bg: #101318;
+  --surface: #181c23;
+  --text: #eef1f6;
+  --text-muted: #9aa4b2;
+  --border: rgba(238, 241, 246, 0.12);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --success: #4ade80;
+  --danger: #f87171;
+  --warning: #fbbf24;
+}
+:root:where([data-theme="light"]) { color-scheme: light; }
+/* Pages generated before the shell had its own components still link the
+   basecoat CDN, which reads its own tokens and switches theme only on a
+   .dark class. Bridged to the shell's, whatever of it those pages use takes
+   the page's accent and follows the declared theme. Its --accent token is a
+   hover tint, renamed in its theme as --color-accent; the shell's --accent is
+   the brand colour, so the tint is derived from it here. */
+:root {
+  --background: var(--bg);
+  --foreground: var(--text);
+  --card: var(--surface);
+  --card-foreground: var(--text);
+  --popover: var(--surface);
+  --popover-foreground: var(--text);
+  --primary: var(--accent);
+  --primary-foreground: var(--accent-contrast);
+  --secondary: color-mix(in srgb, var(--text) 7%, var(--surface));
+  --secondary-foreground: var(--text);
+  --muted: color-mix(in srgb, var(--text) 5%, var(--surface));
+  --muted-foreground: var(--text-muted);
+  --color-accent: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  --color-accent-foreground: var(--text);
+  --destructive: var(--danger);
+  --input: var(--border);
+  --ring: var(--accent);
+}
+* { box-sizing: border-box; }
+/* The reset the pages were written against: they all linked basecoat, which
+   ships Tailwind's. Its components now live here, so the reset does too. */
+*, ::before, ::after, ::backdrop { margin: 0; padding: 0; border: 0 solid; }
+/* Preflight's rule too: without it a component class that sets display
+   (.alert, .card, .btn…) beats the hidden attribute and shows the element. */
+[hidden]:where(:not([hidden="until-found"])) { display: none !important; }
+.hidden { display: none !important; }
+h1, h2, h3, h4, h5, h6 { font-size: inherit; font-weight: inherit; }
+a { color: inherit; text-decoration: inherit; }
+b, strong { font-weight: bolder; }
+ol, ul, menu { list-style: none; }
+svg, video, canvas, iframe { display: block; vertical-align: middle; }
+button, input, select, textarea { color: inherit; background-color: transparent; border-radius: 0; }
+table { border-collapse: collapse; }
+hr { height: 0; color: inherit; border-top-width: 1px; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+img { max-width: 100%; display: block; }
+
+.shell-container { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
+.shell-section { padding: calc(var(--space) * 2) 0; }
+.shell-grid { display: grid; gap: var(--space); grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.shell-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: var(--space); }
+.shell-footer { padding: 24px 0 40px; color: var(--text-muted); font-size: 13px; }
+
+.shell-hero { padding: calc(var(--space) * 3) 0 calc(var(--space) * 2); }
+.shell-hero h1 { font-size: clamp(26px, 4vw, 40px); line-height: 1.15; margin: 0 0 10px; text-wrap: balance; }
+.shell-hero p { color: var(--text-muted); max-width: 60ch; margin: 0; }
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: var(--space);
+}
+
+.kpi { display: flex; flex-direction: column; gap: 4px; }
+.kpi .kpi-value { font-size: clamp(22px, 2.3vw, 28px); font-weight: 650; line-height: 1.1; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.kpi .kpi-label { font-size: 13px; color: var(--text-muted); }
+.kpi .kpi-delta { font-size: 12.5px; font-weight: 600; }
+.kpi .kpi-delta.up { color: var(--success); }
+.kpi .kpi-delta.down { color: var(--danger); }
+
+table.shell-table { border-collapse: collapse; width: 100%; font-size: 14px; }
+table.shell-table th {
+  text-align: left; font-size: 11.5px; letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--text-muted); font-weight: 600;
+}
+table.shell-table th, table.shell-table td { padding: 9px 12px 9px 0; border-bottom: 1px solid var(--border); }
+table.shell-table td.num, table.shell-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+
+.chart-box { width: 100%; min-height: 220px; }
+.chart-box svg { width: 100%; height: auto; display: block; }
+.chart-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 16px; margin-top: 12px; font-size: 12.5px; color: var(--text-muted); }
+.chart-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.chart-legend i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.chart-legend b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.muted { color: var(--text-muted); }
+.accent { color: var(--accent-text); }
+.shell-badge, .eyebrow {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent-text);
+}
+/* A pill keeps its content width inside flex and grid columns, which would
+   otherwise stretch it across the card; a centred parent still centres it. */
+.shell-badge, .eyebrow, .badge { width: fit-content; max-width: 100%; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .shell-fade { animation: shell-fade 400ms ease both; }
+  @keyframes shell-fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+}
+
+/* Layout and type utilities: what the pages kept spelling in style="".
+   Spacing and type sizes follow Tailwind's scale; there is no Tailwind. */
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.stack { display: flex; flex-direction: column; gap: var(--space); }
+.between { justify-content: space-between; }
+.grow { flex: 1 1 0; min-width: 0; }
+.cols-2, .cols-3, .cols-4, .cols-5 { display: grid; gap: var(--space); grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 720px) {
+  .cols-2, .cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .cols-5 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (min-width: 1000px) { .cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 1100px) { .cols-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+.gap-1 { gap: 4px; } .gap-2 { gap: 8px; } .gap-3 { gap: 12px; } .gap-4 { gap: 16px; } .gap-6 { gap: 24px; }
+.m-0 { margin: 0; }
+.mt-1 { margin-top: 4px; } .mt-2 { margin-top: 8px; } .mt-3 { margin-top: 12px; } .mt-4 { margin-top: 16px; } .mt-6 { margin-top: 24px; }
+.mb-1 { margin-bottom: 4px; } .mb-2 { margin-bottom: 8px; } .mb-3 { margin-bottom: 12px; } .mb-4 { margin-bottom: 16px; } .mb-6 { margin-bottom: 24px; }
+.p-2 { padding: 8px; } .p-3 { padding: 12px; } .p-4 { padding: 16px; } .p-6 { padding: 24px; }
+.text-xs { font-size: 12px; } .text-sm { font-size: 14px; } .text-base { font-size: 16px; }
+.text-lg { font-size: 18px; } .text-xl { font-size: 20px; line-height: 1.35; }
+.text-2xl { font-size: 24px; line-height: 1.25; } .text-3xl { font-size: 30px; line-height: 1.2; }
+.font-medium { font-weight: 500; } .font-semibold { font-weight: 600; } .font-bold { font-weight: 700; }
+.text-right { text-align: right; } .text-center { text-align: center; }
+.nowrap { white-space: nowrap; }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-variant-numeric: tabular-nums; }
+.w-full { width: 100%; }
+.text-success { color: var(--success); } .text-danger { color: var(--danger); } .text-warning { color: var(--warning); }
+
+/* Components, with basecoat 1.0 markup (variants and sizes are data
+   attributes) and the shell tokens, so a page needs neither component CSS
+   nor a CSS framework. An older page that also links basecoat gets these
+   rules after it, over the same properties. */
+button, input, select, textarea { font: inherit; }
+input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 36px; padding: 0 14px; border: 1px solid transparent; border-radius: calc(var(--radius) - 2px);
+  background: var(--accent); color: var(--accent-contrast);
+  font-size: 14px; font-weight: 500; line-height: 1; white-space: nowrap; text-decoration: none; cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+.btn:hover { background: color-mix(in srgb, var(--accent) 86%, #000); }
+.btn:disabled, .btn[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
+.btn[data-variant="secondary"] { background: color-mix(in srgb, var(--text) 8%, var(--surface)); color: var(--text); }
+.btn[data-variant="secondary"]:hover { background: color-mix(in srgb, var(--text) 14%, var(--surface)); }
+.btn[data-variant="outline"] { background: var(--surface); color: var(--text); border-color: var(--border); }
+.btn[data-variant="ghost"] { background: transparent; color: var(--text); }
+.btn[data-variant="outline"]:hover, .btn[data-variant="ghost"]:hover { background: color-mix(in srgb, var(--accent) 10%, var(--surface)); }
+.btn[data-variant="destructive"] { background: var(--danger); color: var(--bg); }
+.btn[data-variant="destructive"]:hover { background: color-mix(in srgb, var(--danger) 86%, var(--text)); }
+.btn[data-variant="link"] { height: auto; padding: 0; background: none; color: var(--accent-text); text-decoration: underline; text-underline-offset: 3px; }
+.btn[data-size="sm"] { height: 30px; padding: 0 10px; font-size: 13px; }
+.btn[data-size="lg"] { height: 42px; padding: 0 20px; font-size: 15px; }
+.btn[data-size="icon"] { width: 36px; padding: 0; }
+
+.badge {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px;
+  border: 1px solid transparent; border-radius: 999px; background: var(--accent); color: var(--accent-contrast);
+  font-size: 12px; font-weight: 600; line-height: 1.5; white-space: nowrap;
+}
+.badge[data-variant="secondary"] { background: color-mix(in srgb, var(--text) 8%, var(--surface)); color: var(--text); }
+.badge[data-variant="outline"] { background: transparent; color: var(--text); border-color: var(--border); }
+.badge[data-variant="destructive"] { background: color-mix(in srgb, var(--danger) 14%, var(--surface)); color: var(--danger); }
+
+.alert {
+  display: grid; gap: 4px; padding: 12px 16px; border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface); color: var(--text); font-size: 14px;
+}
+.alert h2, .alert h3 { margin: 0; font-size: 14px; font-weight: 600; }
+.alert p, .alert section { margin: 0; color: var(--text-muted); }
+.alert[data-variant="destructive"] { border-color: color-mix(in srgb, var(--danger) 45%, var(--border)); background: color-mix(in srgb, var(--danger) 7%, var(--surface)); color: var(--danger); }
+
+.card {
+  display: flex; flex-direction: column; gap: 16px; padding: 20px 0;
+  border: 1px solid var(--border); border-radius: calc(var(--radius) + 2px);
+  background: var(--surface); color: var(--text); box-shadow: var(--shadow);
+}
+.card > header, .card > section, .card > footer { padding: 0 20px; }
+.card > header { display: grid; gap: 4px; }
+.card > header h2, .card > header h3 { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.3; }
+.card > header p { margin: 0; color: var(--text-muted); font-size: 14px; }
+.card > footer { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+.input {
+  width: 100%; min-height: 36px; padding: 6px 12px; border: 1px solid var(--border); border-radius: calc(var(--radius) - 2px);
+  background: var(--surface); color: var(--text); font-size: 14px;
+}
+textarea.input { min-height: 84px; resize: vertical; }
+.input::placeholder { color: var(--text-muted); }
+.input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+.field { display: grid; gap: 6px; }
+.field label { font-size: 14px; font-weight: 500; }
+.field [role="alert"] { color: var(--danger); font-size: 13px; }
+
+dialog.dialog {
+  width: min(520px, calc(100vw - 32px)); max-height: calc(100vh - 32px); margin: auto; padding: 0;
+  border: 1px solid var(--border); border-radius: calc(var(--radius) + 4px);
+  background: var(--surface); color: var(--text); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+}
+dialog.dialog::backdrop { background: rgba(0, 0, 0, 0.5); }
+dialog.dialog > div { display: grid; gap: 16px; padding: 24px; }
+dialog.dialog header { display: grid; gap: 4px; }
+dialog.dialog header h2 { margin: 0; font-size: 18px; font-weight: 600; }
+dialog.dialog header p { margin: 0; color: var(--text-muted); font-size: 14px; }
+dialog.dialog footer { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+
+.tabs { display: grid; gap: 12px; }
+.tabs > [role="tablist"] {
+  display: inline-flex; gap: 4px; width: fit-content; max-width: 100%; padding: 4px; overflow-x: auto;
+  border-radius: var(--radius); background: color-mix(in srgb, var(--text) 6%, var(--surface));
+}
+.tabs [role="tab"] {
+  padding: 6px 12px; border: 0; border-radius: calc(var(--radius) - 4px); background: transparent;
+  color: var(--text-muted); font-size: 14px; font-weight: 500; white-space: nowrap; cursor: pointer;
+}
+.tabs [role="tab"][aria-selected="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+.tabs [role="tabpanel"][hidden] { display: none; }
+
+.accordion > details { border-bottom: 1px solid var(--border); }
+.accordion > details > summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px 0; font-weight: 500; list-style: none; cursor: pointer;
+}
+.accordion > details > summary::-webkit-details-marker { display: none; }
+.accordion > details > summary::after { content: "+"; color: var(--text-muted); font-size: 18px; line-height: 1; }
+.accordion > details[open] > summary::after { content: "\2212"; }
+.accordion > details > :not(summary) { margin: 0 0 14px; color: var(--text-muted); }
+
+.toaster {
+  position: fixed; right: 16px; bottom: 16px; z-index: 50; display: flex; flex-direction: column-reverse; gap: 8px;
+  width: min(360px, calc(100vw - 32px)); pointer-events: none;
+}
+.toaster .toast { pointer-events: auto; transition: opacity 200ms ease, transform 200ms ease; }
+.toaster .toast[aria-hidden="true"] { opacity: 0; transform: translateY(8px); }
+.toaster .toast-content {
+  padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface); color: var(--text); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12); font-size: 13px;
+}
+.toaster .toast-content h2 { margin: 0 0 2px; font-size: 14px; font-weight: 600; }
+.toaster .toast-content p { margin: 0; color: var(--text-muted); }
+
+/* skipUI building blocks. */
+.skip-table-search { max-width: 320px; margin-bottom: 12px; }
+.skip-table-wrap { overflow-x: auto; }
+table.shell-table th[data-sort] { cursor: pointer; user-select: none; }
+table.shell-table th[aria-sort="ascending"]::after { content: " \25B2"; font-size: 9px; }
+table.shell-table th[aria-sort="descending"]::after { content: " \25BC"; font-size: 9px; }
+table.shell-table td.skip-table-empty { color: var(--text-muted); text-align: center; padding: 24px 0; }
+.skip-pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; font-size: 13px; color: var(--text-muted); }
+.toaster .toast[data-type="success"] .toast-content { border-left: 3px solid var(--success); }
+.toaster .toast[data-type="error"] .toast-content { border-left: 3px solid var(--danger); }
+
+</style>
+<script>
+/* Skip artifact shell — fixed helpers served beside every artifact. */
+(function () {
+  "use strict";
+
+  var fmt = {
+    num: function (v, opts) { return new Intl.NumberFormat("pt-BR", opts || {}).format(v); },
+    brl: function (v) { return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v); },
+    pct: function (v) { return new Intl.NumberFormat("pt-BR", { style: "percent", maximumFractionDigits: 1 }).format(v); },
+    compact: function (v) { return new Intl.NumberFormat("pt-BR", { notation: "compact", maximumFractionDigits: 1 }).format(v); },
+    brlCompact: function (v) { return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", notation: "compact", maximumFractionDigits: 1 }).format(v); }
+  };
+
+  // axisLabels formats the five y-axis ticks in the unit the chart declared
+  // (percent, BRL or plain numbers), compact so long values never clip, with
+  // the fewest decimals that still print every tick exactly (1,5 mi, not 2 mi).
+  function axisLabels(format, ticks) {
+    function at(digits) {
+      var opts = { notation: "compact", maximumFractionDigits: digits };
+      if (format === "pct") opts = { style: "percent", maximumFractionDigits: digits };
+      else if (format === "brl") opts = { style: "currency", currency: "BRL", notation: "compact", maximumFractionDigits: digits };
+      var nf = new Intl.NumberFormat("pt-BR", opts);
+      return ticks.map(function (t) { return nf.format(t); });
+    }
+    for (var digits = 0; digits < 2; digits++) {
+      if (at(digits).join("|") === at(digits + 1).join("|")) return at(digits);
+    }
+    return at(2);
+  }
+
+  // yAxisPad formats the ticks and measures the left padding they need from
+  // the longest one; drawYAxis then draws the grid and the labels.
+  function yAxisPad(format, max) {
+    var labels = axisLabels(format, [0, max / 4, max / 2, (max * 3) / 4, max]);
+    var longest = labels.reduce(function (m, l) { return Math.max(m, l.length); }, 0);
+    return { labels: labels, padL: Math.max(40, Math.round(longest * 6.2) + 14) };
+  }
+  function drawYAxis(svg, axis, W, padR, padT, plotH) {
+    for (var g = 0; g <= 4; g++) {
+      var gy = padT + plotH - (plotH * g) / 4;
+      svg.appendChild(svgEl("line", { x1: axis.padL, y1: gy, x2: W - padR, y2: gy, stroke: "currentColor", "stroke-opacity": 0.08 }));
+      var lbl = svgEl("text", { x: axis.padL - 8, y: gy + 4, "text-anchor": "end", "font-size": 10, fill: mutedColor() });
+      lbl.textContent = axis.labels[g];
+      svg.appendChild(lbl);
+    }
+  }
+
+  // xLabelStep: show every k-th category label so labels never overlap, and
+  // always the last one (counted back from the end).
+  function xLabelStep(labels, step) {
+    var longest = labels.reduce(function (m, l) { return Math.max(m, String(l).length); }, 0);
+    return Math.max(1, Math.ceil((longest * 6.4 + 8) / Math.max(step, 1)));
+  }
+  function drawXLabel(svg, text, x, y, W, edgeGuard) {
+    var anchor = "middle";
+    var half = String(text).length * 3.2;
+    if (edgeGuard && x - half < 4) anchor = "start";
+    if (edgeGuard && x + half > W - 4) anchor = "end";
+    var tx = svgEl("text", { x: x, y: y, "text-anchor": anchor, "font-size": 11, fill: mutedColor() });
+    tx.textContent = text;
+    svg.appendChild(tx);
+  }
+  // categoryLines fits a bar's category name in its slot: one line, two lines
+  // split at a space, or cut with "…". A bar without its name can't be read, so
+  // categories are never skipped; null when the slot is too narrow for that.
+  function categoryLines(text, slot) {
+    var fit = Math.floor((slot - 6) / 6.4);
+    var s = String(text);
+    if (fit < 4) return null;
+    if (s.length <= fit) return [s];
+    var cut = function (t) { return t.length <= fit ? t : t.slice(0, fit - 1).trimEnd() + "…"; };
+    var best = -1;
+    for (var i = 0; i < s.length; i++) {
+      if (s[i] === " " && (best < 0 || Math.abs(s.length / 2 - i) < Math.abs(s.length / 2 - best))) best = i;
+    }
+    if (best < 0) return [cut(s)];
+    return [cut(s.slice(0, best)), cut(s.slice(best + 1))];
+  }
+  function legend(el, items) {
+    var box = document.createElement("div");
+    box.className = "chart-legend";
+    items.forEach(function (it) {
+      var row = document.createElement("span");
+      var dot = document.createElement("i");
+      dot.style.background = it.color;
+      row.appendChild(dot);
+      row.appendChild(document.createTextNode((it.label || "") + (it.value ? " " : "")));
+      if (it.value) {
+        var v = document.createElement("b");
+        v.textContent = it.value;
+        row.appendChild(v);
+      }
+      box.appendChild(row);
+    });
+    resolve(el).appendChild(box);
+  }
+  var seriesPalette = ["#1baf7a", "#eda100", "#e34948", "#4a3aa7", "#e87ba4", "#0ea5b7"];
+
+  // format accepts a function OR one of the fmt names ("num" | "brl" | "pct").
+  // A page's function may return nothing or throw: the chart prints its
+  // number instead of taking the rest of the page script down with it.
+  function coerceFormat(spec) {
+    if (typeof spec === "function") {
+      return function (v) {
+        try {
+          var out = spec(v);
+          return out == null ? "" : String(out);
+        } catch (e) {
+          return fmt.num(v);
+        }
+      };
+    }
+    if (typeof spec === "string" && fmt[spec]) return fmt[spec];
+    return function (v) { return fmt.num(v); };
+  }
+
+  function accent() {
+    return getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#2563eb";
+  }
+  function mutedColor() {
+    return getComputedStyle(document.documentElement).getPropertyValue("--text-muted").trim() || "#5b6472";
+  }
+  function svgEl(tag, attrs) {
+    var el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    for (var k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+  function frame(el, w, h) {
+    var svg = svgEl("svg", { viewBox: "0 0 " + w + " " + h, role: "img" });
+    el = resolve(el);
+    el.innerHTML = "";
+    el.appendChild(svg);
+    return svg;
+  }
+
+  // maxOf guards the axis scale: empty values would give -Infinity (truthy,
+  // so "|| 1" can't catch it) and a non-positive max would flip the chart.
+  // finite reads a chart value as a number, 0 when it is not one (NaN,
+  // Infinity, a stray string), so one bad value cannot blank the axis.
+  function finite(v) {
+    var n = +v;
+    return isFinite(n) ? n : 0;
+  }
+
+  function maxOf(values) {
+    var m = values.length ? Math.max.apply(null, values.map(finite)) : 0;
+    return m > 0 ? m : 1;
+  }
+
+  // labelsFor pads or trims the category names to the n points drawn: pages
+  // pass labels and values of different lengths, and one throw here loses
+  // every section the page renders after the chart.
+  function labelsFor(cfg, n) {
+    var out = [];
+    for (var i = 0; i < n; i++) out.push(cfg.labels && cfg.labels[i] != null ? String(cfg.labels[i]) : "");
+    return out;
+  }
+
+  // niceMax rounds the scale up so the four grid steps land on round values
+  // (1, 1.5, 2, 2.5, 3, 4, 5, 6 or 8 × 10^k) and the tick labels read exactly.
+  function niceMax(max) {
+    var raw = max / 4;
+    var mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    var res = raw / mag;
+    var steps = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10];
+    var nice = steps.filter(function (s) { return s >= res - 1e-9; })[0];
+    return nice * mag * 4;
+  }
+
+  // bar(el, {labels:[], values:[], color?, format?}) — vertical bar chart.
+  function bar(el, cfg) {
+    var W = 640, H = 280, padB = 30, padT = 12, padR = 12;
+    var max = niceMax(maxOf(cfg.values));
+    var axis = yAxisPad(cfg.format, max);
+    var svg = frame(el, W, H);
+    var n = cfg.values.length;
+    var labels = labelsFor(cfg, n);
+    var plotW = W - axis.padL - padR;
+    var step = plotW / n, bw = Math.min(step * 0.62, 64);
+    var names = labels.map(function (l) { return categoryLines(l, step); });
+    var named = names.every(Boolean);
+    if (named && names.some(function (l) { return l.length > 1; })) padB = 42;
+    var plotH = H - padT - padB;
+    var color = cfg.color || accent();
+    var f = coerceFormat(cfg.format);
+    var every = xLabelStep(labels, step);
+    drawYAxis(svg, axis, W, padR, padT, plotH);
+    cfg.values.forEach(function (v, i) {
+      var bh = Math.max(0, (finite(v) / max) * plotH);
+      var x = axis.padL + i * step + (step - bw) / 2;
+      var y = padT + plotH - bh;
+      var r = svgEl("rect", { x: x, y: y, width: bw, height: bh, rx: 4, fill: (cfg.colors && cfg.colors[i]) || color });
+      var t = svgEl("title", {});
+      t.textContent = labels[i] + ": " + f(v);
+      r.appendChild(t);
+      svg.appendChild(r);
+      if (named) {
+        names[i].forEach(function (text, li) {
+          drawXLabel(svg, text, x + bw / 2, padT + plotH + 18 + li * 13, W, false);
+        });
+      } else if ((n - 1 - i) % every === 0) {
+        drawXLabel(svg, labels[i], x + bw / 2, H - 10, W, false);
+      }
+    });
+  }
+
+  // line(el, {labels:[], values:[] | series:[{label, values, color?}], color?, format?})
+  // — one line, or several series on one scale with a legend under the chart.
+  function line(el, cfg) {
+    var W = 640, H = 280, padB = 30, padT = 12, padR = 16;
+    var series = cfg.series && cfg.series.length
+      ? cfg.series
+      : [{ label: "", values: cfg.values || [], color: cfg.color }];
+    var all = [];
+    series.forEach(function (s) { all = all.concat(s.values || []); });
+    var max = niceMax(maxOf(all));
+    var axis = yAxisPad(cfg.format, max);
+    var svg = frame(el, W, H);
+    var n = series.reduce(function (m, s) { return Math.max(m, (s.values || []).length); }, 0);
+    var labels = labelsFor(cfg, n);
+    var plotW = W - axis.padL - padR, plotH = H - padT - padB;
+    var f = coerceFormat(cfg.format);
+    drawYAxis(svg, axis, W, padR, padT, plotH);
+    var xs = labels.map(function (_, i) { return axis.padL + (n === 1 ? plotW / 2 : (plotW * i) / (n - 1)); });
+    var every = xLabelStep(labels, n > 1 ? plotW / (n - 1) : plotW);
+    labels.forEach(function (label, i) {
+      if ((n - 1 - i) % every === 0) drawXLabel(svg, label, xs[i], H - 10, W, true);
+    });
+    var colors = series.map(function (s, si) {
+      return s.color || (si === 0 ? (cfg.color || accent()) : seriesPalette[(si - 1) % seriesPalette.length]);
+    });
+    series.forEach(function (s, si) {
+      var color = colors[si];
+      var pts = (s.values || []).map(function (v, i) { return [xs[i], padT + plotH - (finite(v) / max) * plotH]; });
+      var d = pts.map(function (p, i) { return (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1); }).join(" ");
+      svg.appendChild(svgEl("path", { d: d, fill: "none", stroke: color, "stroke-width": 2, "stroke-linejoin": "round" }));
+      pts.forEach(function (p, i) {
+        var c = svgEl("circle", { cx: p[0], cy: p[1], r: 3.5, fill: color });
+        var t = svgEl("title", {});
+        t.textContent = (s.label ? s.label + " · " : "") + labels[i] + ": " + f(s.values[i]);
+        c.appendChild(t);
+        svg.appendChild(c);
+      });
+    });
+    if (series.length > 1) {
+      legend(el, series.map(function (s, si) { return { label: s.label, color: colors[si] }; }));
+    }
+  }
+
+  // donut(el, {labels:[], values:[], colors?, format?, center?, centerLabel?, legend?})
+  // — donut with a short total in the centre (compact, in the declared unit)
+  // and, with legend: true, the labels and shares listed under it.
+  function donut(el, cfg) {
+    var W = 320, H = 280, cx = W / 2, cy = H / 2, R = 92, r = 58;
+    var svg = frame(el, W, H);
+    // At 100% of a wide container the donut outgrows the height pages give
+    // the box and spills over the next section: keep it at its own size.
+    svg.style.maxWidth = W + "px";
+    svg.style.margin = "0 auto";
+    var values = cfg.values.map(finite);
+    var labels = labelsFor(cfg, values.length);
+    var sum = values.reduce(function (a, b) { return a + b; }, 0);
+    var total = sum || 1;
+    var palette = cfg.colors || [accent()].concat(seriesPalette);
+    // The hover keeps the full value; the centre has room for a short one.
+    var full = coerceFormat(cfg.format);
+    var short = typeof cfg.format === "function" ? full : cfg.format === "brl" ? fmt.brlCompact : fmt.compact;
+    var a0 = -Math.PI / 2;
+    values.forEach(function (v, i) {
+      var a1 = a0 + (v / total) * Math.PI * 2;
+      var large = a1 - a0 > Math.PI ? 1 : 0;
+      var p = ["M", cx + R * Math.cos(a0), cy + R * Math.sin(a0),
+        "A", R, R, 0, large, 1, cx + R * Math.cos(a1), cy + R * Math.sin(a1),
+        "L", cx + r * Math.cos(a1), cy + r * Math.sin(a1),
+        "A", r, r, 0, large, 0, cx + r * Math.cos(a0), cy + r * Math.sin(a0), "Z"].join(" ");
+      var path = svgEl("path", { d: p, fill: palette[i % palette.length] });
+      var t = svgEl("title", {});
+      t.textContent = labels[i] + ": " + full(v) + " (" + fmt.pct(v / total) + ")";
+      path.appendChild(t);
+      svg.appendChild(path);
+      a0 = a1;
+    });
+    // A share chart has no total worth printing: without its own centre text
+    // the caption alone takes the middle.
+    var text = cfg.center != null ? String(cfg.center) : (cfg.format === "pct" ? "" : short(sum));
+    if (text) {
+      var size = text.length > 9 ? 14 : text.length > 7 ? 17 : 20;
+      var center = svgEl("text", { x: cx, y: cfg.centerLabel ? cy + 1 : cy + 6, "text-anchor": "middle", "font-size": size, "font-weight": 650, fill: "currentColor" });
+      center.textContent = text;
+      svg.appendChild(center);
+    }
+    if (cfg.centerLabel) {
+      var cap = svgEl("text", { x: cx, y: text ? cy + 19 : cy + 5, "text-anchor": "middle", "font-size": 11, fill: mutedColor() });
+      cap.textContent = cfg.centerLabel;
+      svg.appendChild(cap);
+    }
+    if (cfg.legend) {
+      legend(el, labels.map(function (label, i) {
+        return { label: label, color: palette[i % palette.length], value: fmt.pct(values[i] / total) };
+      }));
+    }
+  }
+
+  // ---- Page building blocks: what dashboards and small systems kept
+  // re-implementing — a searchable sortable table, a KPI row, tabs, toasts,
+  // dialogs, saved state and mock data. Every call is opt-in, so a page that
+  // brings its own versions keeps them.
+
+  function resolve(target) {
+    return typeof target === "string" ? document.querySelector(target) : target;
+  }
+
+  function node(tag, className, text) {
+    var el = document.createElement(tag);
+    if (className) el.className = className;
+    if (text != null) el.textContent = text;
+    return el;
+  }
+
+  function isNumberColumn(col) {
+    return col.align === "right" || col.format === "num" || col.format === "brl" || col.format === "pct";
+  }
+
+  function cellText(col, row) {
+    var value = row[col.key];
+    if (value == null) return "";
+    return col.format ? coerceFormat(col.format)(value) : String(value);
+  }
+
+  function compareValues(a, b) {
+    if (typeof a === "number" && typeof b === "number") return a - b;
+    return String(a == null ? "" : a).localeCompare(String(b == null ? "" : b), "pt-BR", { numeric: true });
+  }
+
+  // table(el, {columns, rows, search?, pageSize?, empty?, onRowClick?}) — a
+  // table.shell-table with sortable headers, an optional search box and
+  // pager. A column is {key, label, format?, align?, sortable? (true),
+  // render?(value, row) returning a Node or an HTML string — the page writes
+  // its cell templates as markup}. Plain values are always set as text.
+  // Returns {setRows, rows}.
+  function table(target, cfg) {
+    var root = resolve(target);
+    var cols = cfg.columns || [];
+    var pageSize = cfg.pageSize || 0;
+    var state = { rows: (cfg.rows || []).slice(), query: "", key: null, dir: 1, page: 0 };
+    root.innerHTML = "";
+    if (cfg.search) {
+      var search = node("input", "input skip-table-search");
+      search.type = "search";
+      search.placeholder = typeof cfg.search === "string" ? cfg.search : "Buscar…";
+      search.setAttribute("aria-label", search.placeholder);
+      search.addEventListener("input", function () {
+        state.query = search.value.trim().toLowerCase();
+        state.page = 0;
+        draw();
+      });
+      root.appendChild(search);
+    }
+    var tableEl = node("table", "shell-table");
+    var headRow = node("tr");
+    var heads = cols.map(function (col) {
+      var th = node("th", isNumberColumn(col) ? "num" : "", col.label == null ? col.key : col.label);
+      th.scope = "col";
+      if (col.sortable !== false) {
+        var toggle = function () {
+          state.dir = state.key === col.key ? -state.dir : 1;
+          state.key = col.key;
+          draw();
+        };
+        th.setAttribute("data-sort", col.key);
+        th.tabIndex = 0;
+        th.addEventListener("click", toggle);
+        th.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); }
+        });
+      }
+      headRow.appendChild(th);
+      return th;
+    });
+    var thead = node("thead");
+    var tbody = node("tbody");
+    var wrap = node("div", "skip-table-wrap");
+    var pager = node("div", "skip-pager");
+    thead.appendChild(headRow);
+    tableEl.appendChild(thead);
+    tableEl.appendChild(tbody);
+    wrap.appendChild(tableEl);
+    root.appendChild(wrap);
+    if (pageSize) root.appendChild(pager);
+
+    function visibleRows() {
+      var rows = state.rows;
+      if (state.query) {
+        rows = rows.filter(function (row) {
+          return cols.some(function (col) { return cellText(col, row).toLowerCase().indexOf(state.query) >= 0; });
+        });
+      }
+      if (state.key) {
+        var key = state.key, dir = state.dir;
+        rows = rows.slice().sort(function (a, b) { return dir * compareValues(a[key], b[key]); });
+      }
+      return rows;
+    }
+
+    function drawRow(row) {
+      var tr = node("tr");
+      cols.forEach(function (col) {
+        var td = node("td", isNumberColumn(col) ? "num" : "");
+        if (!col.render) {
+          td.textContent = cellText(col, row);
+        } else {
+          var content = col.render(row[col.key], row);
+          if (content instanceof Node) td.appendChild(content);
+          else td.innerHTML = content == null ? "" : String(content);
+        }
+        tr.appendChild(td);
+      });
+      // The row stays a row (no role) and takes focus, so a keyboard reaches
+      // the same action; keys pressed on a control inside a cell are its own.
+      if (cfg.onRowClick) {
+        tr.style.cursor = "pointer";
+        tr.tabIndex = 0;
+        tr.addEventListener("click", function () { cfg.onRowClick(row); });
+        tr.addEventListener("keydown", function (e) {
+          if (e.target !== tr || (e.key !== "Enter" && e.key !== " ")) return;
+          e.preventDefault();
+          cfg.onRowClick(row);
+        });
+      }
+      return tr;
+    }
+
+    function pagerButton(label, disabled, step) {
+      var button = node("button", "btn", label);
+      button.type = "button";
+      button.setAttribute("data-variant", "outline");
+      button.setAttribute("data-size", "sm");
+      button.disabled = disabled;
+      button.addEventListener("click", function () { state.page += step; draw(); });
+      return button;
+    }
+
+    function draw() {
+      var rows = visibleRows();
+      heads.forEach(function (th, i) {
+        if (cols[i].key === state.key) th.setAttribute("aria-sort", state.dir > 0 ? "ascending" : "descending");
+        else th.removeAttribute("aria-sort");
+      });
+      var pages = pageSize ? Math.max(1, Math.ceil(rows.length / pageSize)) : 1;
+      state.page = Math.min(state.page, pages - 1);
+      var shown = pageSize ? rows.slice(state.page * pageSize, (state.page + 1) * pageSize) : rows;
+      tbody.innerHTML = "";
+      if (!shown.length) {
+        var empty = node("td", "skip-table-empty", cfg.empty || "Nenhum registro encontrado.");
+        empty.colSpan = cols.length;
+        tbody.appendChild(node("tr")).appendChild(empty);
+      }
+      shown.forEach(function (row) { tbody.appendChild(drawRow(row)); });
+      if (!pageSize) return;
+      pager.innerHTML = "";
+      var from = rows.length ? state.page * pageSize + 1 : 0;
+      pager.appendChild(node("span", "", from + "–" + Math.min(rows.length, (state.page + 1) * pageSize) + " de " + rows.length));
+      var nav = node("div", "row gap-2");
+      nav.appendChild(pagerButton("Anterior", state.page === 0, -1));
+      nav.appendChild(pagerButton("Próxima", state.page >= pages - 1, 1));
+      pager.appendChild(nav);
+    }
+
+    draw();
+    return {
+      setRows: function (rows) { state.rows = rows.slice(); draw(); },
+      rows: visibleRows
+    };
+  }
+
+  // kpis(el, [{label, value, format?, delta?, hint?}]) — KPI cards in a
+  // responsive grid; delta is a fraction (0.12 renders as ▲ 12%).
+  function kpis(target, items) {
+    var root = resolve(target);
+    root.innerHTML = "";
+    root.classList.add("shell-grid");
+    items.forEach(function (item) {
+      var card = node("div", "panel kpi");
+      card.appendChild(node("span", "kpi-label", item.label));
+      // Large money values go compact ("R$ 27,5 mi"): the full amount does
+      // not fit a KPI card at four per row.
+      var kpiFormat = item.format === "brl" && Math.abs(item.value) >= 1e6 ? fmt.brlCompact : (item.format ? coerceFormat(item.format) : null);
+      card.appendChild(node("span", "kpi-value", kpiFormat ? kpiFormat(item.value) : String(item.value)));
+      if (typeof item.delta === "number") {
+        var up = item.delta >= 0;
+        card.appendChild(node("span", "kpi-delta " + (up ? "up" : "down"), (up ? "▲ " : "▼ ") + fmt.pct(Math.abs(item.delta))));
+      }
+      if (item.hint) card.appendChild(node("span", "kpi-label", item.hint));
+      root.appendChild(card);
+    });
+  }
+
+  // badge(text, variant?) — a .badge node for table cells and lists;
+  // variant is "secondary" | "outline" | "destructive" (default: primary).
+  function badge(text, variant) {
+    var el = node("span", "badge", text);
+    if (variant) el.setAttribute("data-variant", variant);
+    return el;
+  }
+
+  // tabs(el) — wires one .tabs block: [role=tab] buttons inside
+  // [role=tablist], each with aria-controls naming its [role=tabpanel].
+  function tabs(target) {
+    var root = resolve(target);
+    var buttons = Array.prototype.slice.call(root.querySelectorAll('[role="tab"]'));
+    function select(chosen) {
+      buttons.forEach(function (b) {
+        var on = b === chosen;
+        b.setAttribute("aria-selected", on ? "true" : "false");
+        b.tabIndex = on ? 0 : -1;
+        var panel = document.getElementById(b.getAttribute("aria-controls"));
+        if (panel) panel.hidden = !on;
+      });
+    }
+    buttons.forEach(function (b, i) {
+      b.addEventListener("click", function () { select(b); });
+      b.addEventListener("keydown", function (e) {
+        var step = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+        if (!step) return;
+        var next = buttons[(i + step + buttons.length) % buttons.length];
+        next.focus();
+        select(next);
+      });
+    });
+    select(buttons.filter(function (b) { return b.getAttribute("aria-selected") === "true"; })[0] || buttons[0]);
+  }
+
+  // toast(message, {type?: "success" | "error", title?, duration?}) — a
+  // .toast in a shared .toaster at the bottom of the page.
+  function toast(message, opts) {
+    opts = opts || {};
+    var toaster = document.querySelector(".toaster") || document.body.appendChild(node("div", "toaster"));
+    var item = node("div", "toast");
+    item.setAttribute("role", opts.type === "error" ? "alert" : "status");
+    item.setAttribute("aria-hidden", "true");
+    if (opts.type) item.setAttribute("data-type", opts.type);
+    var content = node("div", "toast-content");
+    var section = node("section");
+    if (opts.title) section.appendChild(node("h2", "", opts.title));
+    section.appendChild(node("p", "", message));
+    content.appendChild(section);
+    item.appendChild(content);
+    toaster.appendChild(item);
+    requestAnimationFrame(function () { item.setAttribute("aria-hidden", "false"); });
+    setTimeout(function () {
+      item.setAttribute("aria-hidden", "true");
+      setTimeout(function () { item.remove(); }, 400);
+    }, opts.duration || 3000);
+  }
+
+  // Dialogs are native <dialog class="dialog">: a [data-dialog-open="id"]
+  // anywhere opens one, a [data-dialog-close] inside closes it, and a click on
+  // its backdrop closes it too. Plain dialog.showModal()/close() still work.
+  document.addEventListener("click", function (e) {
+    var target = e.target;
+    if (!(target instanceof Element)) return;
+    var opener = target.closest("[data-dialog-open]");
+    if (opener) {
+      var dialog = document.getElementById(opener.getAttribute("data-dialog-open"));
+      if (dialog && dialog.showModal && !dialog.open) dialog.showModal();
+      return;
+    }
+    var closer = target.closest("[data-dialog-close]");
+    if (closer && closer.closest("dialog")) {
+      closer.closest("dialog").close();
+      return;
+    }
+    if (target.tagName === "DIALOG" && target.classList.contains("dialog") && target.open) target.close();
+  });
+
+  // store(key, fallback) — JSON state in localStorage that never throws (a
+  // private window or a full quota falls back to memory): {get, set, update}.
+  function store(key, fallback) {
+    var memory;
+    // Set while the last write did not reach localStorage: what is stored
+    // there is older than memory until a write goes through again.
+    var unsaved = false;
+    var initial = function () { return fallback === undefined ? undefined : JSON.parse(JSON.stringify(fallback)); };
+    function get() {
+      if (!unsaved) {
+        try {
+          var raw = localStorage.getItem(key);
+          if (raw != null) return JSON.parse(raw);
+        } catch (e) { /* storage unavailable: memory below */ }
+      }
+      return memory !== undefined ? memory : initial();
+    }
+    function set(value) {
+      memory = value;
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+        unsaved = false;
+      } catch (e) {
+        unsaved = true;
+      }
+      return value;
+    }
+    return { get: get, set: set, update: function (fn) { return set(fn(get())); } };
+  }
+
+  // mock — seeded random data, so a page asks for 90 days of numbers in one
+  // line instead of writing them out; the same seed gives the same data.
+  var FIRST = ["Ana", "Bruno", "Carla", "Diego", "Eduarda", "Felipe", "Gabriela", "Henrique", "Isabela", "João",
+    "Larissa", "Marcos", "Natália", "Otávio", "Paula", "Rafael", "Sofia", "Thiago", "Vanessa", "Lucas"];
+  var LAST = ["Silva", "Santos", "Oliveira", "Souza", "Pereira", "Costa", "Rodrigues", "Almeida", "Nascimento", "Lima",
+    "Araújo", "Fernandes", "Carvalho", "Gomes", "Martins", "Rocha", "Ribeiro", "Barbosa"];
+  var INITIALS = "ABCDEFGHIJLMNOPRSTV".split("");
+  var CITIES = ["São Paulo, SP", "Rio de Janeiro, RJ", "Belo Horizonte, MG", "Curitiba, PR", "Porto Alegre, RS",
+    "Salvador, BA", "Recife, PE", "Fortaleza, CE", "Brasília, DF", "Goiânia, GO", "Campinas, SP", "Florianópolis, SC",
+    "Manaus, AM", "Belém, PA", "Vitória, ES", "Natal, RN"];
+
+  function createMock(seed) {
+    var state = seed >>> 0;
+    var names = 0;
+    function random() {
+      state = (state + 0x6d2b79f5) >>> 0;
+      var t = state;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    }
+    function int(min, max) { return min + Math.floor(random() * (max - min + 1)); }
+    function pick(list) { return list[Math.floor(random() * list.length)]; }
+    var mock = {
+      seed: function (value) { state = value >>> 0; names = 0; return mock; },
+      random: random,
+      int: int,
+      float: function (min, max, decimals) {
+        var factor = Math.pow(10, decimals == null ? 2 : decimals);
+        return Math.round((min + random() * (max - min)) * factor) / factor;
+      },
+      pick: pick,
+      chance: function (p) { return random() < p; },
+      // There are 360 first/last pairs. A page that draws until the name is
+      // new (do { … } while (used.has(name))) froze the tab past them, so
+      // later draws widen the space: a second surname after 200 (6,480), a
+      // middle initial after 4,000.
+      name: function () {
+        names++;
+        var middle = names > 4000 ? pick(INITIALS) + ". " : "";
+        return pick(FIRST) + " " + middle + (names > 200 ? pick(LAST) + " " : "") + pick(LAST);
+      },
+      city: function () { return pick(CITIES); },
+      // series(n, {start, trend, noise, min, decimals}) — a walk: each value
+      // moves by trend (fraction per step) plus up to ±noise of itself.
+      series: function (n, opts) {
+        opts = opts || {};
+        var value = opts.start == null ? 100 : opts.start;
+        var factor = Math.pow(10, opts.decimals || 0);
+        var out = [];
+        for (var i = 0; i < n; i++) {
+          out.push(Math.max(opts.min == null ? 0 : opts.min, Math.round(value * factor) / factor));
+          value = value * (1 + (opts.trend || 0)) * (1 + (random() * 2 - 1) * (opts.noise == null ? 0.08 : opts.noise));
+        }
+        return out;
+      },
+      // dates(n, {end?, step?: "day" | "week" | "month"}) — ISO dates
+      // (YYYY-MM-DD), oldest first, ending at end (default: today).
+      dates: function (n, opts) {
+        opts = opts || {};
+        var end = opts.end ? new Date(opts.end) : new Date();
+        var out = [];
+        for (var i = n - 1; i >= 0; i--) {
+          var d = new Date(end.getTime());
+          if (opts.step === "month") d.setMonth(d.getMonth() - i);
+          else d.setDate(d.getDate() - i * (opts.step === "week" ? 7 : 1));
+          out.push(d.toISOString().slice(0, 10));
+        }
+        return out;
+      },
+      // rows(n, spec) — n objects; each spec value is a function(i), a list
+      // to pick from, or a constant.
+      rows: function (n, spec) {
+        var out = [];
+        for (var i = 0; i < n; i++) {
+          var row = {};
+          for (var key in spec) {
+            var value = spec[key];
+            row[key] = typeof value === "function" ? value(i) : Array.isArray(value) ? pick(value) : value;
+          }
+          out.push(row);
+        }
+        return out;
+      }
+    };
+    return mock;
+  }
+
+  window.skipShell = { fmt: fmt };
+  window.skipChart = { bar: bar, line: line, donut: donut };
+  window.skipUI = { table: table, kpis: kpis, badge: badge, tabs: tabs, toast: toast };
+  window.skipStore = store;
+  window.skipMock = createMock(20261022);
+})();
+
+</script>
+<style>
+:root {
+--accent: #121D59;
+--accent-text: #121D59;
+--accent-contrast: #ffffff;
+--green: #047857;
+--green-soft: #d1fae5;
+--amber: #b45309;
+--amber-soft: #fef3c7;
+--blue-soft: #e0e7ff;
+--ink: #0f172a;
+--muted-ink: #475569;
+--line: #e2e8f0;
+--paper: #ffffff;
+--wash: #f5f7fb;
+--sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+--mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+font-family: var(--sans);
+color: var(--ink);
+background: var(--paper);
+margin: 0;
+line-height: 1.6;
+-webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent); }
+:focus-visible { outline: 3px solid #f59e0b; outline-offset: 3px; border-radius: 6px; }
+h1, h2, h3, h4 { color: var(--ink); line-height: 1.2; letter-spacing: -0.02em; margin: 0; }
+p { margin: 0; color: var(--muted-ink); }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.wrap { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+section { padding: 104px 0; }
+.section-head { text-align: center; max-width: 720px; margin: 0 auto 56px; }
+.eyebrow-pill {
+display: inline-flex; align-items: center; gap: 8px;
+padding: 6px 14px; border-radius: 999px;
+background: var(--blue-soft); color: var(--accent);
+font-size: 13px; font-weight: 600; letter-spacing: 0.02em;
+}
+.eyebrow-pill .dot { width: 7px; height: 7px; border-radius: 50%; background: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,.2); }
+.section-title { font-size: clamp(30px, 4vw, 42px); font-weight: 800; margin-top: 16px; }
+.section-sub { font-size: 17px; margin-top: 14px; }
+.caption { font-size: 12.5px; color: #64748b; }
+
+/* Buttons */
+.btn-primary, .btn-secondary, .btn-ghost-light {
+display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+height: 48px; padding: 0 22px; border-radius: 10px;
+font: 600 15px var(--sans); cursor: pointer; text-decoration: none;
+transition: transform .18s ease, box-shadow .18s ease, background .18s ease, color .18s ease;
+border: 1px solid transparent; white-space: nowrap;
+}
+.btn-primary { background: var(--accent); color: #fff; box-shadow: 0 6px 18px rgba(18,29,89,.25); }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(18,29,89,.32); }
+.btn-secondary { background: #fff; color: var(--accent); border-color: #cbd5e1; }
+.btn-secondary:hover { border-color: var(--accent); transform: translateY(-2px); }
+.btn-ghost-light { background: transparent; color: #fff; border-color: rgba(255,255,255,.35); }
+.btn-ghost-light:hover { background: rgba(255,255,255,.1); }
+.btn-sm { height: 38px; padding: 0 16px; font-size: 14px; }
+
+/* Header */
+.site-header {
+position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+transition: background .3s ease, box-shadow .3s ease, border-color .3s ease;
+border-bottom: 1px solid transparent;
+}
+.site-header.scrolled { background: rgba(255,255,255,.96); backdrop-filter: blur(10px); box-shadow: 0 4px 20px rgba(15,23,42,.06); border-bottom-color: var(--line); }
+.header-inner { height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); font-weight: 800; font-size: 18px; letter-spacing: -0.02em; }
+.brand-mark { width: 36px; height: 36px; border-radius: 10px; background: var(--accent); display: grid; place-items: center; }
+.nav-links { display: flex; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.nav-links a { display: block; padding: 8px 14px; border-radius: 8px; font-size: 15px; font-weight: 500; color: var(--muted-ink); text-decoration: none; transition: color .15s, background .15s; }
+.nav-links a:hover { color: var(--accent); background: var(--wash); }
+.header-cta { display: flex; align-items: center; gap: 12px; }
+.menu-toggle { display: none; width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line); background: #fff; cursor: pointer; align-items: center; justify-content: center; }
+.menu-toggle span, .menu-toggle span::before, .menu-toggle span::after { display: block; width: 18px; height: 2px; background: var(--ink); border-radius: 2px; position: relative; transition: transform .25s, opacity .25s; }
+.menu-toggle span::before, .menu-toggle span::after { content: ""; position: absolute; left: 0; }
+.menu-toggle span::before { top: -6px; }
+.menu-toggle span::after { top: 6px; }
+.menu-toggle[aria-expanded="true"] span { background: transparent; }
+.menu-toggle[aria-expanded="true"] span::before { top: 0; transform: rotate(45deg); }
+.menu-toggle[aria-expanded="true"] span::after { top: 0; transform: rotate(-45deg); }
+.mobile-nav { display: none; }
+
+/* Hero */
+.hero { padding: 150px 0 96px; background: radial-gradient(1200px 500px at 85% -10%, #e4e9ff 0%, transparent 60%), #fff; }
+.hero-grid { display: grid; grid-template-columns: 1.02fr 1fr; gap: 64px; align-items: center; }
+.hero h1 { font-size: clamp(36px, 5vw, 56px); font-weight: 800; margin-top: 22px; }
+.hero h1 em { font-style: normal; color: var(--accent); }
+.hero-sub { font-size: 18px; margin-top: 20px; max-width: 560px; }
+.hero-actions { display: flex; gap: 14px; margin-top: 34px; flex-wrap: wrap; }
+.hero-notes { display: flex; gap: 22px; margin-top: 28px; flex-wrap: wrap; }
+.hero-notes span { font-size: 13.5px; color: #64748b; display: inline-flex; align-items: center; gap: 6px; }
+
+/* Mockup */
+.mockup { background: #fff; border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 30px 60px -20px rgba(15,23,42,.22), 0 2px 6px rgba(15,23,42,.06); overflow: hidden; }
+.mockup-bar { display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: #f8fafc; border-bottom: 1px solid var(--line); }
+.mockup-bar i { width: 10px; height: 10px; border-radius: 50%; background: #cbd5e1; display: block; }
+.mockup-bar .url { margin-left: 12px; font-size: 12px; color: #64748b; font-family: var(--mono); }
+.mockup-body { padding: 20px; display: grid; gap: 16px; }
+.mini-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.mini-stat { border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+.mini-stat small { display: block; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+.mini-stat b { font-family: var(--mono); font-size: 20px; color: var(--ink); }
+.mini-stat em { font-style: normal; font-size: 11.5px; color: var(--green); font-weight: 600; }
+.mock-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.mock-table th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: #64748b; padding: 8px 10px; border-bottom: 1px solid var(--line); font-weight: 600; }
+.mock-table td { padding: 10px; border-bottom: 1px solid #f1f5f9; color: var(--ink); }
+.mock-table td.mono { font-size: 12.5px; }
+.badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.badge-open { background: #e0e7ff; color: #3730a3; }
+.badge-progress { background: var(--amber-soft); color: #92400e; }
+.badge-done { background: var(--green-soft); color: #065f46; }
+.badge-neutral { background: #f1f5f9; color: #334155; }
+
+/* Numbers band */
+.numbers { background: var(--accent); padding: 72px 0; color: #fff; }
+.numbers-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+.num-card { padding: 8px 4px; border-left: 1px solid rgba(255,255,255,.18); padding-left: 24px; }
+.num-card:first-child { border-left: none; padding-left: 0; }
+.num-value { font-family: var(--mono); font-size: clamp(32px, 4vw, 44px); font-weight: 600; letter-spacing: -0.02em; color: #fff; }
+.num-label { font-size: 15px; color: #c7d2fe; margin-top: 6px; font-weight: 500; }
+.num-note { font-size: 12.5px; color: #a5b4fc; margin-top: 4px; }
+
+/* Cards base */
+.card {
+background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 28px;
+box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 8px 24px -12px rgba(15,23,42,.1);
+transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+}
+.card:hover { transform: translateY(-4px); box-shadow: 0 2px 4px rgba(15,23,42,.05), 0 18px 36px -14px rgba(15,23,42,.18); border-color: #cbd5e1; }
+.icon-tile { width: 48px; height: 48px; border-radius: 12px; background: var(--blue-soft); color: var(--accent); display: grid; place-items: center; margin-bottom: 20px; }
+.icon-tile.green { background: var(--green-soft); color: var(--green); }
+.icon-tile.amber { background: var(--amber-soft); color: var(--amber); }
+.card h3 { font-size: 19px; font-weight: 700; margin-bottom: 8px; }
+.card p { font-size: 15px; }
+
+/* How it works */
+.steps { display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px; position: relative; list-style: none; padding: 0; margin: 0; }
+.steps::before { content: ""; position: absolute; top: 36px; left: 10%; right: 10%; height: 2px; background: linear-gradient(90deg, #c7d2fe, #a5b4fc, #c7d2fe); z-index: 0; }
+.step { position: relative; z-index: 1; text-align: center; padding: 0 6px; }
+.step-num { width: 72px; height: 72px; margin: 0 auto 20px; border-radius: 50%; background: #fff; border: 2px solid var(--accent); color: var(--accent); display: grid; place-items: center; font-family: var(--mono); font-weight: 600; font-size: 20px; box-shadow: 0 6px 16px rgba(18,29,89,.12); }
+.step h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+.step p { font-size: 14.5px; }
+
+/* Features grid */
+.features { background: var(--wash); }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.feature-tag { display: inline-block; margin-top: 16px; font-size: 12px; color: #64748b; font-family: var(--mono); }
+
+/* Four dimensions */
+.dimensions-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+.dim-card { border-top: 4px solid var(--accent); }
+.dim-card:nth-child(2) { border-top-color: var(--green); }
+.dim-card:nth-child(3) { border-top-color: var(--amber); }
+.dim-card:nth-child(4) { border-top-color: #7c3aed; }
+.dim-card .k { font-family: var(--mono); font-size: 12px; color: #64748b; letter-spacing: .06em; text-transform: uppercase; }
+.dim-states { display: flex; flex-direction: column; gap: 8px; margin-top: 18px; }
+.dim-states span { font-size: 13px; padding: 8px 12px; border-radius: 8px; background: #f8fafc; border: 1px solid var(--line); color: #334155; font-family: var(--mono); }
+.dim-states span.on { background: var(--blue-soft); border-color: #a5b4fc; color: #312e81; font-weight: 600; }
+.dim-foot { margin-top: 36px; padding: 20px 24px; border-radius: 14px; background: var(--blue-soft); color: #312e81; font-size: 15px; text-align: center; }
+
+/* Governance */
+.levels { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+.level { border: 1px solid var(--line); border-radius: 14px; padding: 22px 18px; background: #fff; transition: transform .25s, box-shadow .25s; }
+.level:hover { transform: translateY(-4px); box-shadow: 0 14px 30px -14px rgba(15,23,42,.2); }
+.level .lvl { font-family: var(--mono); font-size: 12px; color: #64748b; }
+.level h3 { font-size: 17px; margin: 8px 0 10px; }
+.level ul { margin: 0; padding-left: 18px; font-size: 13.5px; color: var(--muted-ink); }
+.level li { margin-bottom: 6px; }
+.level.top { border-color: var(--accent); background: linear-gradient(180deg, #eef1ff, #fff 60%); }
+.gov-callout { margin-top: 28px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.gov-callout .card { padding: 22px 24px; }
+.gov-callout strong { display: block; color: var(--ink); margin-bottom: 6px; font-size: 15px; }
+
+/* Security */
+.security { background: var(--wash); }
+.sec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start; }
+.sec-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; }
+.sec-list li { display: flex; gap: 14px; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; box-shadow: 0 1px 2px rgba(15,23,42,.04); }
+.sec-list li svg { flex-shrink: 0; color: var(--green); margin-top: 2px; }
+.sec-list strong { display: block; color: var(--ink); font-size: 15.5px; margin-bottom: 2px; }
+.sec-list span { font-size: 14.5px; color: var(--muted-ink); }
+.law-panel { background: var(--accent); color: #fff; border-radius: 18px; padding: 36px; }
+.law-panel h3 { color: #fff; font-size: 22px; }
+.law-panel p { color: #c7d2fe; margin-top: 10px; font-size: 15px; }
+.law-items { margin-top: 24px; display: grid; gap: 12px; }
+.law-items div { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-radius: 10px; background: rgba(255,255,255,.08); font-size: 14px; }
+.law-items b { font-family: var(--mono); color: #fff; font-weight: 600; }
+
+/* Testimonial */
+.testimonial { background: #fff; }
+.quote-card { max-width: 880px; margin: 0 auto; border: 1px solid var(--line); border-radius: 20px; padding: 56px 56px 48px; background: linear-gradient(180deg, #fafbff, #fff); box-shadow: 0 20px 50px -24px rgba(18,29,89,.25); position: relative; }
+.quote-mark { width: 56px; height: 56px; border-radius: 14px; background: var(--accent); display: grid; place-items: center; margin-bottom: 24px; }
+.quote-card blockquote { margin: 0; font-size: clamp(19px, 2.2vw, 24px); line-height: 1.5; color: var(--ink); font-weight: 500; letter-spacing: -0.01em; }
+.quote-author { margin-top: 28px; display: flex; align-items: center; gap: 14px; }
+.avatar-initials { width: 48px; height: 48px; border-radius: 50%; background: var(--blue-soft); color: var(--accent); display: grid; place-items: center; font-weight: 700; }
+.quote-author b { display: block; color: var(--ink); }
+.quote-author span { font-size: 14px; color: #64748b; }
+.quote-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 36px; padding-top: 28px; border-top: 1px solid var(--line); }
+.quote-metrics div { text-align: left; }
+.quote-metrics b { font-family: var(--mono); font-size: 26px; color: var(--accent); font-weight: 600; display: block; }
+.quote-metrics span { font-size: 13px; color: #64748b; }
+
+/* Plans */
+.plans { background: var(--wash); }
+.plans-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; align-items: stretch; }
+.plan { display: flex; flex-direction: column; }
+.plan.featured { border: 2px solid var(--accent); box-shadow: 0 24px 50px -20px rgba(18,29,89,.35); position: relative; }
+.plan .tag { position: absolute; top: -13px; left: 28px; background: var(--accent); color: #fff; font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 999px; letter-spacing: .02em; }
+.plan h3 { font-size: 22px; }
+.plan .price { margin: 18px 0 6px; font-size: 22px; font-weight: 700; color: var(--ink); }
+.plan .price-note { font-size: 13px; color: #64748b; margin-bottom: 22px; }
+.plan ul { list-style: none; padding: 0; margin: 0 0 28px; display: grid; gap: 12px; flex: 1; }
+.plan li { display: flex; gap: 10px; font-size: 14.5px; color: var(--muted-ink); align-items: flex-start; }
+.plan li svg { flex-shrink: 0; color: var(--green); margin-top: 3px; }
+.plan .btn-primary, .plan .btn-secondary { width: 100%; }
+
+/* FAQ */
+.faq-wrap { max-width: 820px; margin: 0 auto; }
+.accordion-item { border: 1px solid var(--line); border-radius: 14px; background: #fff; margin-bottom: 12px; overflow: hidden; transition: border-color .2s, box-shadow .2s; }
+.accordion-item.open { border-color: #a5b4fc; box-shadow: 0 8px 22px -12px rgba(18,29,89,.25); }
+.accordion-btn { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px 24px; background: none; border: 0; cursor: pointer; text-align: left; font: 600 16px var(--sans); color: var(--ink); }
+.accordion-btn:hover { color: var(--accent); }
+.accordion-btn .chev { flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; background: var(--wash); display: grid; place-items: center; transition: transform .25s, background .25s; color: var(--accent); }
+.accordion-item.open .chev { transform: rotate(180deg); background: var(--blue-soft); }
+.accordion-panel { max-height: 0; overflow: hidden; transition: max-height .35s ease; }
+.accordion-panel-inner { padding: 0 24px 22px; font-size: 15px; color: var(--muted-ink); }
+
+/* CTA */
+.cta-band { background: var(--accent); color: #fff; padding: 88px 0; position: relative; overflow: hidden; }
+.cta-band::after { content: ""; position: absolute; right: -120px; top: -120px; width: 420px; height: 420px; border-radius: 50%; border: 1px solid rgba(255,255,255,.12); }
+.cta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center; position: relative; z-index: 1; }
+.cta-band h2 { color: #fff; font-size: clamp(30px, 4vw, 40px); font-weight: 800; }
+.cta-band p { color: #c7d2fe; margin-top: 16px; font-size: 17px; }
+.cta-points { margin-top: 28px; display: grid; gap: 10px; list-style: none; padding: 0; }
+.cta-points li { display: flex; gap: 10px; color: #e0e7ff; font-size: 15px; align-items: center; }
+.form-card { background: #fff; color: var(--ink); border-radius: 18px; padding: 36px; box-shadow: 0 30px 60px -20px rgba(0,0,0,.35); }
+.form-card h3 { font-size: 20px; }
+.form-card .caption { margin-top: 4px; margin-bottom: 22px; }
+.form-grid { display: grid; gap: 16px; }
+.field label { display: block; font-size: 13.5px; font-weight: 600; color: #334155; margin-bottom: 6px; }
+.field input, .field select { width: 100%; height: 46px; padding: 0 14px; border-radius: 10px; border: 1px solid #cbd5e1; font: 15px var(--sans); color: var(--ink); background: #fff; transition: border-color .15s, box-shadow .15s; }
+.field input:focus, .field select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px rgba(18,29,89,.14); }
+.field .help { font-size: 12px; color: #64748b; margin-top: 5px; }
+.form-card .btn-primary { width: 100%; margin-top: 6px; }
+.form-ok { display: none; margin-top: 14px; padding: 12px 14px; border-radius: 10px; background: var(--green-soft); color: #065f46; font-size: 14px; font-weight: 500; }
+
+/* Footer */
+.site-footer { background: #0b1238; color: #c7d2fe; padding: 72px 0 32px; }
+.footer-grid { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: 40px; }
+.site-footer .brand { color: #fff; }
+.site-footer p { color: #94a3b8; font-size: 14.5px; margin-top: 16px; max-width: 320px; }
+.site-footer h4 { color: #fff; font-size: 14px; margin-bottom: 16px; text-transform: uppercase; letter-spacing: .08em; }
+.site-footer ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.site-footer a { color: #94a3b8; text-decoration: none; font-size: 14.5px; transition: color .15s; }
+.site-footer a:hover { color: #fff; }
+.footer-bottom { margin-top: 56px; padding-top: 24px; border-top: 1px solid rgba(148,163,184,.2); display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; font-size: 13px; color: #94a3b8; }
+
+/* Reveal animation */
+.reveal { opacity: 0; transform: translateY(24px); transition: opacity .7s ease, transform .7s cubic-bezier(.2,.7,.2,1); }
+.reveal.in { opacity: 1; transform: none; }
+.reveal.d1 { transition-delay: .08s; }
+.reveal.d2 { transition-delay: .16s; }
+.reveal.d3 { transition-delay: .24s; }
+.reveal.d4 { transition-delay: .32s; }
+@media (prefers-reduced-motion: reduce) {
+.reveal { opacity: 1; transform: none; transition: none; }
+html { scroll-behavior: auto; }
+}
+
+/* Responsive */
+@media (max-width: 1080px) {
+.nav-links, .header-cta .btn-primary { display: none; }
+.menu-toggle { display: inline-flex; }
+.mobile-nav.open { display: block; position: absolute; top: 72px; left: 0; right: 0; background: #fff; border-bottom: 1px solid var(--line); box-shadow: 0 16px 30px -18px rgba(15,23,42,.25); padding: 12px 24px 20px; }
+.mobile-nav ul { list-style: none; padding: 0; margin: 0 0 16px; display: grid; gap: 4px; }
+.mobile-nav a { display: block; padding: 12px 14px; border-radius: 10px; text-decoration: none; color: var(--ink); font-weight: 500; }
+.mobile-nav a:hover { background: var(--wash); }
+.mobile-nav .btn-primary { width: 100%; }
+.dimensions-grid { grid-template-columns: repeat(2, 1fr); }
+.levels { grid-template-columns: repeat(3, 1fr); }
+.plans-grid { grid-template-columns: repeat(2, 1fr); }
+.steps { grid-template-columns: repeat(2, 1fr); }
+.steps::before { display: none; }
+.footer-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 960px) {
+.hero-grid, .cta-grid, .sec-grid { grid-template-columns: 1fr; gap: 44px; }
+.numbers-grid { grid-template-columns: repeat(2, 1fr); row-gap: 36px; }
+.num-card:nth-child(3) { border-left: none; padding-left: 0; }
+.grid-3 { grid-template-columns: repeat(2, 1fr); }
+section { padding: 80px 0; }
+}
+@media (max-width: 640px) {
+.wrap { padding: 0 18px; }
+.grid-3, .plans-grid, .steps, .levels, .dimensions-grid, .gov-callout, .quote-metrics { grid-template-columns: 1fr; }
+.hero { padding: 124px 0 72px; }
+.hero-actions .btn-primary, .hero-actions .btn-secondary { width: 100%; }
+.mini-stats { grid-template-columns: 1fr 1fr 1fr; }
+.mock-table .hide-sm { display: none; }
+.quote-card { padding: 36px 26px; }
+.form-card { padding: 26px; }
+.numbers-grid { grid-template-columns: 1fr 1fr; }
+.num-card { padding-left: 14px; }
+.footer-grid { grid-template-columns: 1fr; }
+.section-title { font-size: 28px; }
+}
+</style>
+</head>
+<body>
+
+<header class="site-header" id="siteHeader">
+<div class="wrap header-inner">
+<a href="#inicio" class="brand" aria-label="Cesta Pública — início">
+<span class="brand-mark" aria-hidden="true">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16l-1.6 9.2A2 2 0 0 1 16.4 20H7.6a2 2 0 0 1-2-1.8L4 9z"/><path d="M9 9l3-5 3 5"/><path d="M9 13v3M12 13v3M15 13v3"/></svg>
+</span>
+Cesta Pública
+</a>
+<nav aria-label="Navegação principal">
+<ul class="nav-links">
+<li><a href="#produto">Produto</a></li>
+<li><a href="#como-funciona">Como funciona</a></li>
+<li><a href="#recursos">Recursos</a></li>
+<li><a href="#planos">Planos</a></li>
+<li><a href="#contato">Contato</a></li>
+</ul>
+</nav>
+<div class="header-cta">
+<a href="cesta-publica.html" class="btn-primary btn-sm">Acessar sistema</a>
+<button class="menu-toggle" id="menuToggle" aria-label="Abrir menu" aria-expanded="false" aria-controls="mobileNav">
+<span></span>
+</button>
+</div>
+</div>
+<div class="mobile-nav" id="mobileNav">
+<ul>
+<li><a href="#produto">Produto</a></li>
+<li><a href="#como-funciona">Como funciona</a></li>
+<li><a href="#recursos">Recursos</a></li>
+<li><a href="#planos">Planos</a></li>
+<li><a href="#contato">Contato</a></li>
+</ul>
+<a href="cesta-publica.html" class="btn-primary">Acessar sistema</a>
+</div>
+</header>
+
+<main>
+
+<!-- HERO -->
+<section class="hero" id="inicio">
+<div class="wrap hero-grid">
+<div class="reveal">
+<span class="eyebrow-pill"><span class="dot"></span>Conforme Lei 14.133/21</span>
+<h1>Transforme a pesquisa de preços em um processo <em>auditável</em></h1>
+<p class="hero-sub">A Cesta Pública organiza cestas de preços, consolida cotações de fornecedores e gera o mapa de preços que sustenta o processo licitatório, com rastreabilidade em cada etapa.</p>
+<div class="hero-actions">
+<a href="#contato" class="btn-primary">Solicitar demonstração</a>
+<a href="cesta-publica.html" class="btn-secondary">Abrir o sistema</a>
+</div>
+<div class="hero-notes">
+<span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#047857" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Trilha de auditoria completa</span>
+<span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#047857" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Dados em território nacional</span>
+</div>
+</div>
+
+<div class="mockup reveal d2" role="img" aria-label="Painel ilustrativo do sistema mostrando cestas de preços com situações Em aberto, Em andamento e Entregue">
+<div class="mockup-bar">
+<i></i><i></i><i></i>
+<span class="url">cestapublica.app/cestas</span>
+</div>
+<div class="mockup-body">
+<div class="mini-stats">
+<div class="mini-stat"><small>Cestas ativas</small><b>48</b><br><em>+6 no mês</em></div>
+<div class="mini-stat"><small>Itens cotados</small><b>3.214</b><br><em>+412 no mês</em></div>
+<div class="mini-stat"><small>Mapas gerados</small><b>31</b><br><em>94% no prazo</em></div>
+</div>
+<table class="mock-table">
+<thead>
+<tr><th>Cesta</th><th class="hide-sm">Lotes</th><th>Situação</th><th class="hide-sm">Itens</th></tr>
+</thead>
+<tbody>
+<tr><td>Hortifrúti — Merenda</td><td class="hide-sm mono">4</td><td><span class="badge badge-open">Em aberto</span></td><td class="hide-sm mono">86</td></tr>
+<tr><td>Combustíveis — Frota</td><td class="hide-sm mono">2</td><td><span class="badge badge-progress">Em andamento</span></td><td class="hide-sm mono">24</td></tr>
+<tr><td>Limpeza hospitalar</td><td class="hide-sm mono">6</td><td><span class="badge badge-done">Entregue</span></td><td class="hide-sm mono">142</td></tr>
+<tr><td>Material de escritório</td><td class="hide-sm mono">3</td><td><span class="badge badge-progress">Em andamento</span></td><td class="hide-sm mono">57</td></tr>
+<tr><td>Construção — SINAPI</td><td class="hide-sm mono">5</td><td><span class="badge badge-done">Entregue</span></td><td class="hide-sm mono">211</td></tr>
+</tbody>
+</table>
+<p class="caption">Dados ilustrativos do painel do produto.</p>
+</div>
+</div>
+</div>
+</section>
+
+<!-- NUMBERS -->
+<section class="numbers" aria-label="Indicadores do produto" style="padding: 72px 0;">
+<div class="wrap numbers-grid">
+<div class="num-card reveal">
+<div class="num-value" data-count="1248">1.248</div>
+<div class="num-label">Cestas processadas</div>
+<div class="num-note">Indicador do produto</div>
+</div>
+<div class="num-card reveal d1">
+<div class="num-value" data-count="48610">48.610</div>
+<div class="num-label">Itens cotados</div>
+<div class="num-note">Indicador do produto</div>
+</div>
+<div class="num-card reveal d2">
+<div class="num-value" data-count="3872">3.872</div>
+<div class="num-label">Fornecedores cadastrados</div>
+<div class="num-note">Indicador do produto</div>
+</div>
+<div class="num-card reveal d3">
+<div class="num-value" data-count="6">6</div>
+<div class="num-label">Fontes oficiais integradas</div>
+<div class="num-note">Indicador do produto</div>
+</div>
+</div>
+</section>
+
+<!-- PRODUTO anchor (intro) -->
+<section id="produto" style="padding-bottom: 0;">
+<div class="wrap section-head reveal">
+<span class="eyebrow-pill">Produto</span>
+<h2 class="section-title">Uma única fonte de verdade para toda a pesquisa de preços</h2>
+<p class="section-sub">Da abertura da cesta à publicação do mapa, cada dado tem origem, autor e data registrados. A equipe trabalha no mesmo lugar, e o órgão responde a qualquer questionamento com histórico completo.</p>
+</div>
+</section>
+
+<!-- COMO FUNCIONA -->
+<section id="como-funciona">
+<div class="wrap">
+<div class="section-head reveal">
+<span class="eyebrow-pill">Como funciona</span>
+<h2 class="section-title">Cinco etapas do início ao mapa de preços</h2>
+<p class="section-sub">O fluxo segue a lógica da pesquisa de preços exigida pela Lei 14.133/21, com cada passagem registrada automaticamente.</p>
+</div>
+<ol class="steps">
+<li class="step reveal">
+<div class="step-num">01</div>
+<h3>Criar a cesta</h3>
+<p>Defina objeto, unidade demandante, período de referência e a equipe responsável.</p>
+</li>
+<li class="step reveal d1">
+<div class="step-num">02</div>
+<h3>Adicionar itens e lotes</h3>
+<p>Importe ou selecione itens do catálogo mestre e agrupe-os em lotes de contratação.</p>
+</li>
+<li class="step reveal d2">
+<div class="step-num">03</div>
+<h3>Convidar fornecedores</h3>
+<p>Envie solicitações de cotação por e-mail com prazo e formulário padronizado.</p>
+</li>
+<li class="step reveal d3">
+<div class="step-num">04</div>
+<h3>Consolidar preços</h3>
+<p>Lance as cotações recebidas, aplique a média aritmética e trate os valores discrepantes.</p>
+</li>
+<li class="step reveal d4">
+<div class="step-num">05</div>
+<h3>Gerar o mapa</h3>
+<p>Emita o mapa de preços em PDF ou planilha, pronto para anexar ao processo.</p>
+</li>
+</ol>
+</div>
+</section>
+
+<!-- RECURSOS -->
+<section id="recursos" class="features">
+<div class="wrap">
+<div class="section-head reveal">
+<span class="eyebrow-pill">Recursos</span>
+<h2 class="section-title">Ferramentas pensadas para o rigor do processo público</h2>
+<p class="section-sub">Cada recurso reduz uma etapa manual e deixa o caminho de decisão visível para quem precisa auditar.</p>
+</div>
+<div class="grid-3">
+<article class="card reveal">
+<div class="icon-tile">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+</div>
+<h3>Catálogo mestre de produtos</h3>
+<p>Busca textual e histórico de uso por item, com reaproveitamento de especificações entre cestas.</p>
+<span class="feature-tag">Catálogo · busca · histórico</span>
+</article>
+<article class="card reveal d1">
+<div class="icon-tile green">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>
+</div>
+<h3>Pesquisa em fontes oficiais</h3>
+<p>Consulta integrada a ANP, CONAB, SINAPI, DATASUS, CEASA e CISCOPAR, com referência e data de cada fonte.</p>
+<span class="feature-tag">ANP · CONAB · SINAPI · DATASUS · CEASA · CISCOPAR</span>
+</article>
+<article class="card reveal d2">
+<div class="icon-tile amber">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16"/></svg>
+</div>
+<h3>Lançamento por fornecedor</h3>
+<p>Planilha de lançamento com navegação em série, do primeiro item ao último, sem perder a referência do fornecedor.</p>
+<span class="feature-tag">Entrada em série · validação de campos</span>
+</article>
+<article class="card reveal">
+<div class="icon-tile">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>
+</div>
+<h3>Cálculo por média aritmética</h3>
+<p>Apuração automática do valor de referência com arredondamento conforme as regras normativas aplicáveis.</p>
+<span class="feature-tag">Média · arredondamento normativo</span>
+</article>
+<article class="card reveal d1">
+<div class="icon-tile green">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg>
+</div>
+<h3>Trilha de auditoria completa</h3>
+<p>Cada transição de situação registra usuário, data, hora e justificativa, com histórico consultável a qualquer tempo.</p>
+<span class="feature-tag">Log imutável · justificativa obrigatória</span>
+</article>
+<article class="card reveal d2">
+<div class="icon-tile amber">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+</div>
+<h3>Controle de alçadas</h3>
+<p>Permissões por nível de usuário, com aprovação superior para as ações que alteram valores publicados.</p>
+<span class="feature-tag">5 níveis · aprovação em cadeia</span>
+</article>
+</div>
+</div>
+</section>
+
+<!-- QUATRO DIMENSÕES -->
+<section id="dimensoes">
+<div class="wrap">
+<div class="section-head reveal">
+<span class="eyebrow-pill">Modelo de estado</span>
+<h2 class="section-title">Quatro dimensões de estado, cada uma com sua evolução</h2>
+<p class="section-sub">O sistema acompanha separadamente a situação interna, a situação do cliente, a situação do documento prévio e a posse da cesta. Cada uma evolui de forma independente, e o histórico mostra por que cada mudança aconteceu.</p>
+</div>
+<div class="dimensions-grid">
+<article class="card dim-card reveal">
+<span class="k">Dimensão 01</span>
+<h3 style="margin-top:8px;">Situação interna</h3>
+<p>Estágio operacional da cesta dentro da equipe de pesquisa.</p>
+<div class="dim-states">
+<span>Rascunho</span>
+<span class="on">Em coleta</span>
+<span>Consolidada</span>
+</div>
+</article>
+<article class="card dim-card reveal d1">
+<span class="k">Dimensão 02</span>
+<h3 style="margin-top:8px;">Situação do cliente</h3>
+<p>Andamento da demanda sob a ótica da unidade solicitante.</p>
+<div class="dim-states">
+<span>Solicitada</span>
+<span class="on">Em validação</span>
+<span>Aceita</span>
+</div>
+</article>
+<article class="card dim-card reveal d2">
+<span class="k">Dimensão 03</span>
+<h3 style="margin-top:8px;">Documento prévio</h3>
+<p>Estado do documento de estimativa que precede a licitação.</p>
+<div class="dim-states">
+<span>Minuta</span>
+<span class="on">Revisado</span>
+<span>Publicado</span>
+</div>
+</article>
+<article class="card dim-card reveal d3">
+<span class="k">Dimensão 04</span>
+<h3 style="margin-top:8px;">Posse da cesta</h3>
+<p>Quem detém a responsabilidade de conduzir a cesta naquele momento.</p>
+<div class="dim-states">
+<span>Pesquisador</span>
+<span class="on">Revisor</span>
+<span>Autoridade</span>
+</div>
+</article>
+</div>
+<div class="dim-foot reveal">
+Uma cesta pode estar "Em coleta" para a equipe, "Em validação" para o cliente e "Minuta" no documento prévio, ao mesmo tempo, sem conflito entre elas.
+</div>
+</div>
+</section>
+
+<!-- GOVERNANÇA -->
+<section id="governanca" class="features">
+<div class="wrap">
+<div class="section-head reveal">
+<span class="eyebrow-pill">Governança e alçadas</span>
+<h2 class="section-title">Cinco níveis de usuário com responsabilidades claras</h2>
+<p class="section-sub">Níveis iniciais exigem revisão superior antes de qualquer publicação. Níveis avançados auditam o trabalho dos inferiores e respondem pelo resultado final.</p>
+</div>
+<div class="levels">
+<div class="level reveal">
+<span class="lvl">NÍVEL 1</span>
+<h3>Aprendiz</h3>
+<ul>
+<li>Lança preços</li>
+<li>Consulta cestas</li>
+<li>Exige revisão</li>
+</ul>
+</div>
+<div class="level reveal d1">
+<span class="lvl">NÍVEL 2</span>
+<h3>Normal</h3>
+<ul>
+<li>Cria cestas</li>
+<li>Convida fornecedores</li>
+<li>Exige revisão</li>
+</ul>
+</div>
+<div class="level reveal d2">
+<span class="lvl">NÍVEL 3</span>
+<h3>Intermediário</h3>
+<ul>
+<li>Consolida preços</li>
+<li>Revisa lançamentos</li>
+<li>Audita Aprendiz</li>
+</ul>
+</div>
+<div class="level top reveal d3">
+<span class="lvl">NÍVEL 4</span>
+<h3>Avançado</h3>
+<ul>
+<li>Gera o mapa</li>
+<li>Aprova valores</li>
+<li>Audita Normal</li>
+</ul>
+</div>
+<div class="level reveal d4">
+<span class="lvl">NÍVEL 5</span>
+<h3>Expert</h3>
+<ul>
+<li>Configura alçadas</li>
+<li>Publica o mapa</li>
+<li>Audita toda a cadeia</li>
+</ul>
+</div>
+</div>
+<div class="gov-callout reveal">
+<div class="card">
+<strong>Revisão obrigatória nos níveis iniciais</strong>
+<p class="caption" style="font-size:14.5px;color:var(--muted-ink);">Lançamentos de Aprendizes e Normais só seguem para consolidação depois de aprovados por um nível superior.</p>
+</div>
+<div class="card">
+<strong>Auditoria em cadeia</strong>
+<p class="caption" style="font-size:14.5px;color:var(--muted-ink);">Níveis avançados visualizam e comentam o histórico de quem está abaixo, com registro de cada parecer.</p>
+</div>
+</div>
+</div>
+</section>
+
+<!-- SEGURANÇA -->
+<section id="seguranca" class="security">
+<div class="wrap sec-grid">
+<div class="reveal">
+<span class="eyebrow-pill">Segurança e conformidade</span>
+<h2 class="section-title" style="margin-top:16px;">Aderente à Lei 14.133/21 e às boas práticas de governança</h2>
+<p class="section-sub">Pontos centrais da plataforma, descritos de forma objetiva para a área jurídica e de controle interno.</p>
+<ul class="sec-list" style="margin-top:32px;">
+<li>
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+<div><strong>Aderência à Lei 14.133/21</strong><span>Fluxo de pesquisa de preços estruturado conforme a metodologia exigida para as licitações.</span></div>
+</li>
+<li>
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+<div><strong>Rastreabilidade de ponta a ponta</strong><span>Toda alteração de valor, situação ou responsável fica registrada com autor e data.</span></div>
+</li>
+<li>
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+<div><strong>Segregação de funções</strong><span>Quem lança o preço não é quem aprova. Alçadas separam coleta, consolidação e publicação.</span></div>
+</li>
+<li>
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+<div><strong>Dados em território nacional</strong><span>Armazenamento em infraestrutura localizada no Brasil, com cópias de segurança periódicas.</span></div>
+</li>
+</ul>
+</div>
+<aside class="law-panel reveal d2" aria-label="Resumo de conformidade">
+<h3>Resumo de conformidade</h3>
+<p>Itens verificados pela equipe de conformidade do produto.</p>
+<div class="law-items">
+<div><span>Metodologia de pesquisa de preços</span><b>OK</b></div>
+<div><span>Registro de trilha de auditoria</span><b>OK</b></div>
+<div><span>Controle de alçadas por nível</span><b>OK</b></div>
+<div><span>Armazenamento em território nacional</span><b>OK</b></div>
+</div>
+</aside>
+</div>
+</section>
+
+<!-- DEPOIMENTO -->
+<section id="depoimento" class="testimonial">
+<div class="wrap">
+<figure class="quote-card reveal" style="margin: 0;">
+<div class="quote-mark" aria-hidden="true">
+<svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><path d="M4 17c0-3 1-6 4-8l1.5 2C7.5 12 6.8 13.5 6.8 15H10v6H4v-4zm10 0c0-3 1-6 4-8l1.5 2C17.5 12 16.8 13.5 16.8 15H20v6h-6v-4z"/></svg>
+</div>
+<blockquote>
+“Antes levávamos semanas para fechar uma pesquisa de preços e ainda respondíamos a questionamentos sem histórico. Com a cesta organizada e o registro de cada etapa, o retrabalho caiu drasticamente e a equipe ganhou tempo para analisar o mercado.”
+</blockquote>
+<figcaption class="quote-author">
+<span class="avatar-initials" aria-hidden="true">GP</span>
+<div>
+<b>Gestor de Compras Públicas</b>
+<span>Órgão municipal de grande porte</span>
+</div>
+</figcaption>
+<div class="quote-metrics">
+<div><b>-60%</b><span>de retrabalho nas pesquisas</span></div>
+<div><b>3×</b><span>mais rápido na emissão do mapa</span></div>
+<div><b>100%</b><span>das etapas com trilha de auditoria</span></div>
+</div>
+</figure>
+</div>
+</section>
+
+<!-- PLANOS -->
+<section id="planos" class="plans">
+<div class="wrap">
+<div class="section-head reveal">
+<span class="eyebrow-pill">Planos</span>
+<h2 class="section-title">Um plano para cada estrutura de órgão</h2>
+<p class="section-sub">Os valores dependem do porte do órgão, do volume de cestas e dos módulos contratados. Converse com a nossa equipe para receber uma proposta.</p>
+</div>
+<div class="plans-grid">
+<div class="card plan reveal">
+<h3>Essencial</h3>
+<p class="caption" style="font-size:14px;margin-top:6px;">Para equipes que iniciam a pesquisa de preços</p>
+<div class="price">Sob consulta</div>
+<div class="price-note">Cobrança conforme volume de cestas</div>
+<ul>
+<li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Cestas e lotes ilimitados</li>
+<li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Catálogo mestre de produtos</li>
+<li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Trilha de auditoria</li>
+<li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Até 5 usuários</li>
+</ul>
+<a href="#contato" class="btn-secondary">Fale com vendas</a>
+</div>
+<div class="card plan featured reveal d1">
+<span class="tag">Mais escolhido</span>
+<h3>Institucional</h3>
+<p class="caption" style="font-size:14px;margin-top:6px;">Para órgãos com controle de alçadas completo</p>
+<div class="price">Sob consulta</div>
+<div class="price-note">Inclui integrações com fontes oficiais</div>
+<ul>
+<li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Tudo do plano Essencial</li>
+<li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Integração com as seis fontes oficiais</li>
+<li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Controle de alçadas em 5 níveis</li>
+<li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Usuários ilimitados e treinamento</li>
+</ul>
+<a href="#contato" class="btn-primary">Fale com vendas</a>
+</div>
+<div class="card plan reveal d2">
+<h3>Corporativo</h3>
+<p class="caption" style="font-size:14px;margin-top:6px;">Para consórcios e grandes estruturas de compras</p>
+<div class="price">Sob consulta</div>
+<div class="price-note">Implantação e suporte dedicados</div>
+<ul>
+<li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Tudo do plano Institucional</li>
+<li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Múltiplos órgãos em uma instância</li>
+<li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Gerente de sucesso dedicado</li>
+<li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Acordo de nível de serviço (SLA)</li>
+</ul>
+<a href="#contato" class="btn-secondary">Fale com vendas</a>
+</div>
+</div>
+</div>
+</section>
+
+<!-- FAQ -->
+<section id="faq">
+<div class="wrap">
+<div class="section-head reveal">
+<span class="eyebrow-pill">Perguntas frequentes</span>
+<h2 class="section-title">Dúvidas comuns sobre implantação e uso</h2>
+<p class="section-sub">Se a sua pergunta não estiver aqui, a equipe comercial responde em até um dia útil.</p>
+</div>
+<div class="faq-wrap" id="faqList">
+<div class="accordion-item open reveal">
+<h3 style="margin:0;">
+<button class="accordion-btn" aria-expanded="true" aria-controls="faq-1" id="faq-b-1">
+Quanto tempo leva a implantação?
+<span class="chev" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></span>
+</button>
+</h3>
+<div class="accordion-panel" id="faq-1" role="region" aria-labelledby="faq-b-1" style="max-height: 200px;">
+<div class="accordion-panel-inner">A implantação costuma levar de 30 a 60 dias, incluindo configuração de alçadas, carga do catálogo inicial e treinamento das equipes. O cronograma é definido em conjunto com o órgão na fase de planejamento.</div>
+</div>
+</div>
+<div class="accordion-item reveal">
+<h3 style="margin:0;">
+<button class="accordion-btn" aria-expanded="false" aria-controls="faq-2" id="faq-b-2">
+Como é feita a migração de dados de planilhas?
+<span class="chev" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></span>
+</button>
+</h3>
+<div class="accordion-panel" id="faq-2" role="region" aria-labelledby="faq-b-2">
+<div class="accordion-panel-inner">Trabalhamos com modelos padronizados de planilha. A equipe valida os dados importados com o órgão, registra o histórico de origem de cada registro e mantém as cestas antigas em modo somente leitura.</div>
+</div>
+</div>
+<div class="accordion-item reveal">
+<h3 style="margin:0;">
+<button class="accordion-btn" aria-expanded="false" aria-controls="faq-3" id="faq-b-3">
+Como funciona a integração com as fontes oficiais?
+<span class="chev" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></span>
+</button>
+</h3>
+<div class="accordion-panel" id="faq-3" role="region" aria-labelledby="faq-b-3">
+<div class="accordion-panel-inner">A consulta às fontes como ANP, CONAB, SINAPI, DATASUS, CEASA e CISCOPAR é feita dentro do sistema, com a referência e a data da coleta registradas em cada item pesquisado.</div>
+</div>
+</div>
+<div class="accordion-item reveal">
+<h3 style="margin:0;">
+<button class="accordion-btn" aria-expanded="false" aria-controls="faq-4" id="faq-b-4">
+Há treinamento para as equipes?
+<span class="chev" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></span>
+</button>
+</h3>
+<div class="accordion-panel" id="faq-4" role="region" aria-labelledby="faq-b-4">
+<div class="accordion-panel-inner">Sim. O treinamento é feito por perfil de usuário, com trilhas específicas para lançamento de preços, consolidação e aprovação, além de materiais de apoio e sessões gravadas.</div>
+</div>
+</div>
+<div class="accordion-item reveal">
+<h3 style="margin:0;">
+<button class="accordion-btn" aria-expanded="false" aria-controls="faq-5" id="faq-b-5">
+Como funciona o suporte técnico?
+<span class="chev" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></span>
+</button>
+</h3>
+<div class="accordion-panel" id="faq-5" role="region" aria-labelledby="faq-b-5">
+<div class="accordion-panel-inner">O suporte funciona em dias úteis, com canal de chamados e atendimento por telefone. Os planos Institucional e Corporativo incluem prazos de resposta definidos em contrato.</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<!-- CTA FINAL -->
+<section class="cta-band" id="contato">
+<div class="wrap cta-grid">
+<div class="reveal">
+<span class="eyebrow-pill" style="background: rgba(255,255,255,.12); color: #e0e7ff;">Demonstração</span>
+<h2 style="margin-top:16px;">Agende uma demonstração com a equipe</h2>
+<p>Apresentamos o sistema com um caso prático da sua rotina de pesquisa de preços, sem compromisso.</p>
+<ul class="cta-points">
+<li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a5b4fc" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Demonstração de 45 minutos</li>
+<li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a5b4fc" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Ambiente de testes com dados de exemplo</li>
+<li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a5b4fc" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Proposta personalizada ao seu porte</li>
+</ul>
+</div>
+<div class="form-card reveal d2">
+<h3>Solicitar demonstração</h3>
+<p class="caption">Preencha os campos e nossa equipe retorna o contato.</p>
+<form class="form-grid" id="demoForm" novalidate>
+<div class="field">
+<label for="f-name">Nome completo</label>
+<input id="f-name" name="name" type="text" placeholder="Nome e sobrenome" autocomplete="name" required>
+<div class="help">Responsável pelo contato no órgão.</div>
+</div>
+<div class="field">
+<label for="f-org">Órgão</label>
+<input id="f-org" name="org" type="text" placeholder="Nome do órgão ou secretaria" required>
+<div class="help">Prefeitura, autarquia ou órgão estadual.</div>
+</div>
+<div class="field">
+<label for="f-email">E-mail institucional</label>
+<input id="f-email" name="email" type="email" placeholder="nome@orgao.gov.br" autocomplete="email" required>
+<div class="help">Use o e-mail do domínio do órgão.</div>
+</div>
+<div class="field">
+<label for="f-phone">Telefone</label>
+<input id="f-phone" name="phone" type="tel" placeholder="(00) 00000-0000" autocomplete="tel">
+<div class="help">Opcional. Para agendamento por ligação.</div>
+</div>
+<button type="submit" class="btn-primary">Agendar demonstração</button>
+<div class="form-ok" id="formOk" role="status" aria-live="polite">Solicitação registrada. Entraremos em contato em breve.</div>
+</form>
+</div>
+</div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+<div class="wrap">
+<div class="footer-grid">
+<div>
+<a href="#inicio" class="brand" aria-label="Cesta Pública — início">
+<span class="brand-mark" aria-hidden="true">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16l-1.6 9.2A2 2 0 0 1 16.4 20H7.6a2 2 0 0 1-2-1.8L4 9z"/><path d="M9 9l3-5 3 5"/></svg>
+</span>
+Cesta Pública
+</a>
+<p>Sistema de gestão de cesta de preços para pesquisa, consolidação e mapa de preços em processos licitatórios.</p>
+</div>
+<div>
+<h4>Produto</h4>
+<ul>
+<li><a href="#produto">Visão geral</a></li>
+<li><a href="#como-funciona">Como funciona</a></li>
+<li><a href="#recursos">Recursos</a></li>
+<li><a href="#planos">Planos</a></li>
+</ul>
+</div>
+<div>
+<h4>Empresa</h4>
+<ul>
+<li><a href="#depoimento">Clientes</a></li>
+<li><a href="#faq">Perguntas frequentes</a></li>
+<li><a href="#contato">Contato</a></li>
+</ul>
+</div>
+<div>
+<h4>Legal</h4>
+<ul>
+<li><a href="#seguranca">Segurança e conformidade</a></li>
+<li><a href="#seguranca">Política de privacidade</a></li>
+<li><a href="#seguranca">Termos de uso</a></li>
+</ul>
+</div>
+</div>
+<div class="footer-bottom">
+<span>© 2026 Cesta Pública. Todos os direitos reservados.</span>
+<span>Sistema de uso institucional · Dados em território nacional</span>
+</div>
+</div>
+</footer>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+var header = document.getElementById('siteHeader');
+var onScroll = function () {
+header.classList.toggle('scrolled', window.scrollY > 20);
+};
+window.addEventListener('scroll', onScroll, { passive: true });
+onScroll();
+
+var toggle = document.getElementById('menuToggle');
+var mobileNav = document.getElementById('mobileNav');
+toggle.addEventListener('click', function () {
+var open = mobileNav.classList.toggle('open');
+toggle.setAttribute('aria-expanded', String(open));
+toggle.setAttribute('aria-label', open ? 'Fechar menu' : 'Abrir menu');
+});
+mobileNav.querySelectorAll('a').forEach(function (a) {
+a.addEventListener('click', function () {
+mobileNav.classList.remove('open');
+toggle.setAttribute('aria-expanded', 'false');
+toggle.setAttribute('aria-label', 'Abrir menu');
+});
+});
+
+var items = document.querySelectorAll('#faqList .accordion-item');
+items.forEach(function (item) {
+var btn = item.querySelector('.accordion-btn');
+var panel = item.querySelector('.accordion-panel');
+btn.addEventListener('click', function () {
+var isOpen = item.classList.contains('open');
+items.forEach(function (other) {
+other.classList.remove('open');
+other.querySelector('.accordion-btn').setAttribute('aria-expanded', 'false');
+other.querySelector('.accordion-panel').style.maxHeight = '0px';
+});
+if (!isOpen) {
+item.classList.add('open');
+btn.setAttribute('aria-expanded', 'true');
+panel.style.maxHeight = panel.scrollHeight + 'px';
+}
+});
+});
+var first = document.querySelector('#faqList .accordion-item.open .accordion-panel');
+if (first) first.style.maxHeight = first.scrollHeight + 'px';
+
+var reveals = document.querySelectorAll('.reveal');
+if ('IntersectionObserver' in window) {
+var io = new IntersectionObserver(function (entries) {
+entries.forEach(function (entry) {
+if (entry.isIntersecting) {
+entry.target.classList.add('in');
+io.unobserve(entry.target);
+}
+});
+}, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+reveals.forEach(function (el) { io.observe(el); });
+} else {
+reveals.forEach(function (el) { el.classList.add('in'); });
+}
+
+var form = document.getElementById('demoForm');
+form.addEventListener('submit', function (e) {
+e.preventDefault();
+var ok = true;
+form.querySelectorAll('input[required]').forEach(function (inp) {
+var valid = inp.value.trim() !== '' && (inp.type !== 'email' || /\S+@\S+\.\S+/.test(inp.value));
+inp.setAttribute('aria-invalid', String(!valid));
+if (!valid) ok = false;
+});
+var msg = document.getElementById('formOk');
+if (ok) {
+msg.style.display = 'block';
+form.reset();
+}
+});
+});
+</script>
+</body>
+</html>

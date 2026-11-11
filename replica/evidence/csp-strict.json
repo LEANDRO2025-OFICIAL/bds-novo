@@ -1,0 +1,22 @@
+{
+  "header": "Content-Security-Policy: script-src 'self'; object-src 'none'; base-uri 'self'",
+  "method": "CSP=\"…\" node replica/tools/serve.mjs <raiz> <porta> [overlay]; Chromium do painel; sondas via javascript_exec",
+  "original_5503": {
+    "console": [
+      "Executing inline script violates … 'script-src 'self'' … sha256-EIb6IPR84uDertB32cS/a95iE8vbTcPNHeKd/qxo4Tk= … blocked",
+      "Executing inline script violates … sha256-XDTB3G8l9TDgzGsoRasG/V0LxTRjO1BfYfLI36D9QX0= … blocked",
+      "Executing inline script violates … sha256-6MdC3u2/XC661t1DWKfSZRsr9bqp5TmeXtc8eyYYb3g= … blocked"
+    ],
+    "typeof_sendToLexical": "undefined",
+    "tab_keydown_defaultPrevented": false,
+    "favicon_href": "favicon.ico (script do tenant bloqueado)",
+    "loader_present": true,
+    "consequence": "o listener de flutter-first-frame não existe → o loader nunca seria removido; o Dart chamaria sendToLexical inexistente"
+  },
+  "replica_5504_sim_ok": {
+    "typeof_GestaoBoot": "object",
+    "typeof_sendToLexical": "function",
+    "state": "ready",
+    "loader_removed": true
+  }
+}
