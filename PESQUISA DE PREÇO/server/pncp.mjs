@@ -3,8 +3,8 @@
 // https://pncp.gov.br/api/consulta/v3/api-docs (consulta). A API de consulta não filtra pela descrição do item,
 // por isso as contratações são localizadas pela busca pública do portal (https://pncp.gov.br/api/search/,
 // a mesma de pncp.gov.br/app/editais), conferida ao vivo em 17/10/2026.
-// Mesmo cliente HTTP do Compras.gov.br (cache 24 h, timeout, novas tentativas), com fila própria.
-import { obterJson, criarFila, montarUrl, filtrarPorPalavras, ErroApi } from './compras.mjs';
+// Mesmo cliente HTTP do Compras.gov.br (cache 24 h, timeout por tentativa, backoff com jitter, reserva em cache), com fila própria.
+import { obterJson, criarFila, criarRastro, montarUrl, filtrarPorPalavras, ErroApi } from './compras.mjs';
 
 export const BASE = 'https://pncp.gov.br';
 const FONTE = 'PNCP';
@@ -79,7 +79,8 @@ async function precosDaContratacao(db, c, termo, o) {
 export async function consultarPrecosPncp(db, { uf, inicio, fim, palavras }, opts = {}) {
   const termo = String(palavras || '').trim();
   if (termo.length < 3) throw new ErroApi('Informe palavras-chave (mín. 3 letras) para buscar no PNCP.');
-  const o = { ...opts, fila: enfileirar, fonte: FONTE };
+  const rastro = opts.rastro || criarRastro();
+  const o = { ...opts, fila: enfileirar, fonte: FONTE, rastro };
 
   const contratacoes = [];
   let truncado = false;
@@ -107,5 +108,5 @@ export async function consultarPrecosPncp(db, { uf, inicio, fim, palavras }, opt
   const avisos = [];
   if (falhas.length) avisos.push(`PNCP: ${falhas.length} de ${lotes.length} contratação(ões) não responderam; tente de novo mais tarde.`);
   if (truncado) avisos.push(`PNCP: examinadas as ${alvo.length} contratações com resultado mais recentes; refine as palavras ou a UF.`);
-  return { registros, totalNaFonte: registros.length, truncado, avisos, consultadoEm: new Date().toISOString() };
+  return { registros, totalNaFonte: registros.length, truncado, avisos, cache: rastro.resumo(), consultadoEm: new Date().toISOString() };
 }

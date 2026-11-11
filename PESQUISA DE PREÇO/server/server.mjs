@@ -5,10 +5,15 @@ import { existsSync, readFileSync } from 'node:fs';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { abrirBanco, transacao } from './db.mjs';
-import { consultarPrecos, ErroApi } from './compras.mjs';
+import { consultarPrecos, limparCacheAntigo, ErroApi } from './compras.mjs';
 import { consultarPrecosPncp } from './pncp.mjs';
 import { atualizarCatalogo, buscarCatalogo, statusCatalogo } from './catalogo.mjs';
 import { analisarItem } from './estatistica.mjs';
+import { gerarCsv } from './csv.mjs';
+import { criarBackup, listarBackups, pastaBackups } from './backup.mjs';
+import { renderizarMapa } from './mapa.mjs';
+import { randomBytes } from 'node:crypto';
+import { exec } from 'node:child_process';
 import { carregarUsuarios, criarAuth, lerCookie } from './auth.mjs';
 
 const RAIZ = resolve(fileURLToPath(new URL('..', import.meta.url)));
@@ -16,13 +21,36 @@ const PUBLICO = join(RAIZ, 'public');
 const PORTA = Number(process.env.PORT || 5600);
 const HOST = process.env.HOST || '127.0.0.1';
 
-export const db = abrirBanco(process.env.DB_PATH || join(RAIZ, 'data', 'pesquisa-precos.db'));
+const DB_PATH = process.env.DB_PATH || join(RAIZ, 'data', 'pesquisa-precos.db');
+const BACKUP_DIR = process.env.BACKUP_DIR || null;
+const BACKUP_RETENCAO = Math.max(1, Math.round(Number(process.env.BACKUP_RETENCAO) || 20));
+const FUSO = process.env.FUSO_HORARIO || undefined;
+
+// abrirBanco cria a pasta de dados (data/) se ela ainda não existir.
+export const db = abrirBanco(DB_PATH);
+try { limparCacheAntigo(db); } catch (e) { console.error('[cache] limpeza falhou:', e.message); }
+
+/**
+ * Cópia de segurança antes de operações sensíveis (mapa, CSV, exclusões em lote).
+ * obrigatorio = true: se a cópia falhar, a operação é cancelada (exclusões). Caso contrário só registra o erro.
+ */
+function backupAntes(motivo, { obrigatorio = false } = {}) {
+  try {
+    const r = criarBackup(db, DB_PATH, { dir: BACKUP_DIR, retencao: BACKUP_RETENCAO });
+    if (r.criado) console.log(`[backup] ${r.nome} (${motivo})`);
+    return r;
+  } catch (e) {
+    console.error(`[backup] ${e.message}`);
+    if (obrigatorio) throw new ErroHttp(500, `${e.message} A operação foi cancelada para proteger seus dados.`);
+    return { criado: false, arquivo: null, nome: null, motivo: e.message };
+  }
+}
 // Usuários: variável USUARIOS (Render) ou arquivo USUARIOS_ARQUIVO (PUBLICAR.cmd). Sem nenhum, o login fica
 // desligado e só o próprio computador acessa: pedidos via proxy/túnel são recusados (ver servidor abaixo).
 const USUARIOS_ARQUIVO = process.env.USUARIOS_ARQUIVO;
 const auth = criarAuth(carregarUsuarios(process.env.USUARIOS || (USUARIOS_ARQUIVO && existsSync(USUARIOS_ARQUIVO) ? readFileSync(USUARIOS_ARQUIVO, 'utf8') : '')));
 
-const TIPOS = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.json': 'application/json; charset=utf-8' };
+const TIPOS = { '.woff2': 'font/woff2', '.txt': 'text/plain; charset=utf-8', '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.json': 'application/json; charset=utf-8' };
 
 class ErroHttp extends Error {
   constructor(status, mensagem) { super(mensagem); this.status = status; }
@@ -81,6 +109,7 @@ function itemComAnalise(item) {
     amostras: amostras.map((a) => ({ ...a, incluida: porId.get(a.id).incluida, motivo: porId.get(a.id).motivo })),
     estimativa: analise.estimativa,
     total: analise.total,
+    limites: analise.limites,
   };
 }
 
@@ -89,7 +118,27 @@ function carregarPesquisa(id) {
   if (!p) throw new ErroHttp(404, 'Pesquisa não encontrada.');
   const itens = db.prepare('SELECT * FROM itens WHERE pesquisa_id = ? ORDER BY ordem, id').all(id).map(itemComAnalise);
   const totalGeral = itens.reduce((s, i) => s + (i.total || 0), 0);
-  return { ...p, itens, totalGeral: Math.round(totalGeral * 100) / 100 };
+  return { ...p, criterio_padrao: lerCriterio(p.criterio_padrao), itens, totalGeral: Math.round(totalGeral * 100) / 100 };
+}
+
+function lerCriterio(textoJson) {
+  try { return JSON.parse(textoJson || '{"tipo":"nenhum"}'); } catch { return { tipo: 'nenhum' }; }
+}
+
+const METODOS = ['auto', 'media', 'mediana', 'menor'];
+/** Valida e reduz o critério às chaves conhecidas. Devolve o JSON a gravar. */
+function validarCriterio(c) {
+  const crit = c || { tipo: 'nenhum' };
+  exigir(['nenhum', 'desvio', 'iqr', 'mediana'].includes(crit.tipo), 'Critério inválido.');
+  const limpo = { tipo: crit.tipo };
+  const chaves = { desvio: ['k'], iqr: ['k'], mediana: ['inferior', 'superior'] }[crit.tipo] || [];
+  for (const k of chaves) {
+    if (crit[k] === undefined || crit[k] === null || crit[k] === '') continue;
+    const n = Number(crit[k]);
+    exigir(Number.isFinite(n) && n >= 0 && n <= 10 && (k !== 'k' || n > 0), `Parâmetro ${k} inválido.`);
+    limpo[k] = n;
+  }
+  return JSON.stringify(limpo);
 }
 
 function tocarPesquisa(id) {
@@ -104,13 +153,8 @@ function validarItem(b, parcial = false) {
   if (b.codigo !== undefined) { it.codigo = numero(b.codigo); exigir(it.codigo === null || Number.isInteger(it.codigo), 'Código inválido.'); }
   if (b.unidade !== undefined) it.unidade = texto(b.unidade, 60);
   if (!parcial || b.quantidade !== undefined) { it.quantidade = numero(b.quantidade ?? 1); exigir(it.quantidade > 0, 'Quantidade deve ser maior que zero.'); }
-  if (b.metodo !== undefined) { exigir(['auto', 'media', 'mediana', 'menor'].includes(b.metodo), 'Método inválido.'); it.metodo = b.metodo; }
-  if (b.criterio !== undefined) {
-    const c = b.criterio || { tipo: 'nenhum' };
-    exigir(['nenhum', 'desvio', 'iqr', 'mediana'].includes(c.tipo), 'Critério inválido.');
-    for (const k of ['k', 'inferior', 'superior']) if (c[k] !== undefined) exigir(Number(c[k]) >= 0 && Number(c[k]) <= 10, `Parâmetro ${k} inválido.`);
-    it.criterio = JSON.stringify(c);
-  }
+  if (b.metodo !== undefined) { exigir(METODOS.includes(b.metodo), 'Método inválido.'); it.metodo = b.metodo; }
+  if (b.criterio !== undefined) it.criterio = validarCriterio(b.criterio);
   if (b.observacao !== undefined) it.observacao = texto(b.observacao, 4000);
   return it;
 }
@@ -121,30 +165,13 @@ function atualizar(tabela, id, campos) {
   db.prepare(`UPDATE ${tabela} SET ${chaves.map((k) => `${k} = ?`).join(', ')} WHERE id = ?`).run(...chaves.map((k) => campos[k]), id);
 }
 
-function csvCampo(v) {
-  if (v === null || v === undefined) return '';
-  const s = typeof v === 'number' ? String(v).replace('.', ',') : String(v);
-  return /[;"\n\r]/.test(s) ? `"${s.replaceAll('"', '""')}"` : s;
-}
-
-function gerarCsv(p) {
-  const linhas = [['Item', 'Descrição', 'Quantidade', 'Unidade', 'Data', 'Órgão', 'UF', 'Município', 'Fornecedor', 'CNPJ/CPF', 'Marca', 'Preço unitário', 'Considerada', 'Motivo/Justificativa', 'Fonte']];
-  p.itens.forEach((it, i) => {
-    for (const a of it.amostras) {
-      linhas.push([i + 1, it.descricao, it.quantidade, it.unidade || a.unidade, a.data_compra, a.orgao, a.uf, a.municipio, a.fornecedor_nome, a.fornecedor_ni, a.marca, a.preco_unitario, a.incluida ? 'Sim' : 'Não', a.justificativa || a.motivo, a.link || a.origem]);
-    }
-    linhas.push([i + 1, `ESTIMADO (${it.estimativa.metodoAplicado || '-'})`, it.quantidade, it.unidade, '', '', '', '', '', '', '', it.estimativa.valor, '', `Total do item: ${it.total ?? '-'}`, '']);
-  });
-  return '﻿' + linhas.map((l) => l.map(csvCampo).join(';')).join('\r\n');
-}
-
 // ---------------------------------------------------------------- rotas
 
 const rotas = [];
 const rota = (metodo, padrao, fn) => rotas.push({ metodo, re: new RegExp(`^${padrao.replace(/:(\w+)/g, '(?<$1>\\d+)')}$`), fn });
 
 const COOKIE = 'sessao';
-const ROTAS_LIVRES = new Set(['/api/sessao', '/api/login', '/api/logout']);
+const ROTAS_LIVRES = new Set(['/api/saude', '/api/sessao', '/api/login', '/api/logout']);
 // Atrás do proxy do Render o IP real é o último do x-forwarded-for (o cliente só controla os anteriores).
 const ipDe = (req) => String(req.headers['x-forwarded-for'] || '').split(',').pop().trim() || req.socket.remoteAddress;
 function gravarCookie(req, res, valor, maxAge) {
@@ -152,6 +179,10 @@ function gravarCookie(req, res, valor, maxAge) {
   res.setHeader('set-cookie', `${COOKIE}=${valor}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${maxAge}${seguro}`);
 }
 
+const usuarioDe = (req) => auth.usuario(lerCookie(req, COOKIE)) || 'local';
+
+// Identidade do serviço: o INICIAR.cmd usa para saber se quem está na porta é o próprio sistema. Não expõe dados.
+rota('GET', '/api/saude', () => ({ app: 'banco-de-precos-ls', ok: true }));
 rota('GET', '/api/sessao', ({ req }) => ({ exigeLogin: auth.ativo, usuario: auth.usuario(lerCookie(req, COOKIE)) }));
 rota('POST', '/api/login', async ({ req, res }) => {
   const b = await lerCorpo(req);
@@ -177,11 +208,11 @@ rota('GET', '/api/catalogo/buscar', ({ url }) => {
 });
 
 /** Consulta as fontes pedidas em paralelo; uma fonte fora do ar vira aviso se a outra respondeu. */
-async function consultarFontes(fontes, filtros) {
+async function consultarFontes(fontes, filtros, opcoes = {}) {
   const nomes = { compras: 'Compras.gov.br', pncp: 'PNCP' };
   // termoPncp: texto da busca no PNCP quando o usuário não deu palavras-chave (não filtra o Compras.gov.br)
-  const consultas = { compras: consultarPrecos, pncp: (d, f) => consultarPrecosPncp(d, { ...f, palavras: f.palavras || f.termoPncp }) };
-  const res = await Promise.allSettled(fontes.map((f) => consultas[f](db, filtros)));
+  const consultas = { compras: consultarPrecos, pncp: (d, f, o) => consultarPrecosPncp(d, { ...f, palavras: f.palavras || f.termoPncp }, o) };
+  const res = await Promise.allSettled(fontes.map((f) => consultas[f](db, filtros, opcoes)));
   const ok = res.flatMap((r, i) => (r.status === 'fulfilled' ? [{ fonte: fontes[i], ...r.value }] : []));
   if (!ok.length) throw res[0].reason;
   const avisos = res.flatMap((r, i) => (r.status === 'rejected' ? [`${nomes[fontes[i]]} indisponível: ${r.reason.message}`] : []));
@@ -198,6 +229,8 @@ async function consultarFontes(fontes, filtros) {
     totalNaFonte: ok.reduce((s, r) => s + r.totalNaFonte, 0),
     truncado: ok.some((r) => r.truncado),
     avisos: [...ok.flatMap((r) => r.avisos || []), ...avisos],
+    // por fonte: de onde veio a resposta (rede, cache válido ou cache vencido por indisponibilidade)
+    fontes: ok.map((r) => ({ fonte: r.fonte, nome: nomes[r.fonte], cache: r.cache || null })),
     consultadoEm: new Date().toISOString(),
   };
 }
@@ -226,21 +259,31 @@ rota('GET', '/api/precos', async ({ url }) => {
     inicio: q.inicio,
     fim: q.fim,
     palavras,
-  });
+  }, { semCache: q.atualizar === '1' });
   if (semPncp) r.avisos.push('PNCP não consultado: informe palavras-chave (mín. 3 letras) para buscar também no PNCP.');
   if (termoPncp && fontes.includes('pncp')) r.avisos.push(`PNCP buscado por “${termoPncp}” (nome no catálogo). Informe palavras-chave para refinar.`);
   return r;
 });
 
-rota('GET', '/api/pesquisas', () => db.prepare(`
-  SELECT p.*, (SELECT COUNT(*) FROM itens i WHERE i.pesquisa_id = p.id) AS total_itens
-  FROM pesquisas p ORDER BY p.atualizado_em DESC`).all());
+function padroesDaPesquisa(b, campos = {}) {
+  if (b.metodoPadrao !== undefined) { exigir(METODOS.includes(b.metodoPadrao), 'Método inválido.'); campos.metodo_padrao = b.metodoPadrao; }
+  if (b.criterioPadrao !== undefined) campos.criterio_padrao = validarCriterio(b.criterioPadrao);
+  return campos;
+}
+
+rota('GET', '/api/pesquisas', () => db.prepare('SELECT id FROM pesquisas ORDER BY atualizado_em DESC, id DESC').all().map(({ id }) => {
+  const { itens, ...p } = carregarPesquisa(id);
+  const amostras = itens.reduce((s, i) => s + i.amostras.length, 0);
+  const validas = itens.reduce((s, i) => s + i.estimativa.resumo.n, 0);
+  return { ...p, total_itens: itens.length, total_amostras: amostras, total_validas: validas, itens_insuficientes: itens.filter((i) => i.estimativa.resumo.n < 3).length };
+}));
 rota('POST', '/api/pesquisas', async ({ req }) => {
   const b = await lerCorpo(req);
   const titulo = texto(b.titulo, 300);
   exigir(titulo, 'Título é obrigatório.');
-  const r = db.prepare('INSERT INTO pesquisas (titulo, processo, orgao, responsavel) VALUES (?, ?, ?, ?)')
-    .run(titulo, texto(b.processo, 100), texto(b.orgao, 300), texto(b.responsavel, 200));
+  const padroes = padroesDaPesquisa(b);
+  const r = db.prepare('INSERT INTO pesquisas (titulo, processo, orgao, responsavel, metodo_padrao, criterio_padrao) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(titulo, texto(b.processo, 100), texto(b.orgao, 300), texto(b.responsavel, 200), padroes.metodo_padrao ?? 'auto', padroes.criterio_padrao ?? '{"tipo":"nenhum"}');
   return carregarPesquisa(Number(r.lastInsertRowid));
 });
 rota('GET', '/api/pesquisas/:id', ({ p }) => carregarPesquisa(Number(p.id)));
@@ -250,31 +293,81 @@ rota('PUT', '/api/pesquisas/:id', async ({ req, p }) => {
   const campos = {};
   if (b.titulo !== undefined) { campos.titulo = texto(b.titulo, 300); exigir(campos.titulo, 'Título é obrigatório.'); }
   for (const [k, max] of [['processo', 100], ['orgao', 300], ['responsavel', 200]]) if (b[k] !== undefined) campos[k] = texto(b[k], max);
+  padroesDaPesquisa(b, campos);
   atualizar('pesquisas', Number(p.id), campos);
   tocarPesquisa(Number(p.id));
   return carregarPesquisa(Number(p.id));
 });
 rota('DELETE', '/api/pesquisas/:id', ({ p }) => {
+  carregarPesquisa(Number(p.id));
+  backupAntes('exclusão de pesquisa', { obrigatorio: true }); // apaga itens e amostras em cascata
   db.prepare('DELETE FROM pesquisas WHERE id = ?').run(Number(p.id));
   return { ok: true };
 });
 rota('GET', '/api/pesquisas/:id/csv', ({ p, res }) => {
   const pesq = carregarPesquisa(Number(p.id));
+  backupAntes('exportação CSV');
   res.writeHead(200, {
     'content-type': 'text/csv; charset=utf-8',
     'content-disposition': `attachment; filename="banco-de-precos-ls-${pesq.id}.csv"`,
+    'cache-control': 'no-store',
+    'x-content-type-options': 'nosniff',
   });
   res.end(gerarCsv(pesq));
   return undefined;
 });
+// Mapa de preços: página pronta para impressão / "Salvar como PDF". Fica sob /api/ para exigir login quando publicado.
+rota('GET', '/api/pesquisas/:id/mapa', ({ p, req, res }) => {
+  const pesq = carregarPesquisa(Number(p.id));
+  backupAntes('mapa de preços');
+  const nonce = randomBytes(16).toString('base64');
+  res.writeHead(200, {
+    'content-type': 'text/html; charset=utf-8',
+    'cache-control': 'no-store',
+    'x-content-type-options': 'nosniff',
+    'content-security-policy': `default-src 'self'; img-src 'self' data:; style-src 'self' 'nonce-${nonce}'; script-src 'self'; base-uri 'self'; form-action 'self'`,
+    'referrer-policy': 'same-origin',
+  });
+  res.end(renderizarMapa(pesq, { nonce, fuso: FUSO, usuario: auth.ativo ? usuarioDe(req) : null }));
+  return undefined;
+});
+
+// Exclusão em lote de itens (com suas amostras). Sempre precedida de backup; se o backup falhar, nada é apagado.
+rota('POST', '/api/pesquisas/:id/itens/excluir-lote', async ({ req, p }) => {
+  const pid = Number(p.id);
+  carregarPesquisa(pid);
+  const b = await lerCorpo(req);
+  exigir(Array.isArray(b.ids) && b.ids.length > 0, 'Informe os itens a excluir.');
+  exigir(b.ids.length <= 1000, 'Máximo de 1000 itens por exclusão.');
+  const ids = [...new Set(b.ids.map(Number))];
+  exigir(ids.every((n) => Number.isInteger(n) && n > 0), 'Identificador de item inválido.');
+  const pertence = db.prepare('SELECT id FROM itens WHERE id = ? AND pesquisa_id = ?');
+  exigir(ids.every((id) => pertence.get(id, pid)), 'Há itens que não pertencem a esta pesquisa.');
+  const backup = backupAntes('exclusão em lote', { obrigatorio: true });
+  const apagar = db.prepare('DELETE FROM itens WHERE id = ? AND pesquisa_id = ?');
+  let excluidos = 0;
+  transacao(db, () => { for (const id of ids) excluidos += Number(apagar.run(id, pid).changes); });
+  tocarPesquisa(pid);
+  return { excluidos, backup: backup.nome, pesquisa: carregarPesquisa(pid) };
+});
+
+rota('GET', '/api/backups', () => {
+  const pasta = pastaBackups(DB_PATH, BACKUP_DIR);
+  const lista = pasta ? listarBackups(pasta) : [];
+  return { retencao: BACKUP_RETENCAO, total: lista.length, ultimo: lista.at(-1) ? { nome: lista.at(-1).nome, data: lista.at(-1).data.toISOString(), bytes: lista.at(-1).bytes } : null };
+});
+rota('POST', '/api/backups', () => {
+  const r = backupAntes('pedido manual', { obrigatorio: true });
+  return { criado: r.criado, nome: r.nome, motivo: r.motivo };
+});
 
 rota('POST', '/api/pesquisas/:id/itens', async ({ req, p }) => {
   const pid = Number(p.id);
-  carregarPesquisa(pid);
+  const pesq = carregarPesquisa(pid);
   const it = validarItem(await lerCorpo(req));
   const ordem = db.prepare('SELECT COALESCE(MAX(ordem), 0) + 1 AS o FROM itens WHERE pesquisa_id = ?').get(pid).o;
   const r = db.prepare(`INSERT INTO itens (pesquisa_id, ordem, descricao, tipo, codigo_tipo, codigo, unidade, quantidade, metodo, criterio, observacao)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(pid, ordem, it.descricao, it.tipo, it.codigo_tipo ?? null, it.codigo ?? null, it.unidade ?? null, it.quantidade, it.metodo ?? 'auto', it.criterio ?? '{"tipo":"nenhum"}', it.observacao ?? null);
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(pid, ordem, it.descricao, it.tipo, it.codigo_tipo ?? null, it.codigo ?? null, it.unidade ?? null, it.quantidade, it.metodo ?? pesq.metodo_padrao ?? 'auto', it.criterio ?? JSON.stringify(pesq.criterio_padrao), it.observacao ?? null);
   tocarPesquisa(pid);
   return itemComAnalise(db.prepare('SELECT * FROM itens WHERE id = ?').get(Number(r.lastInsertRowid)));
 });
@@ -330,6 +423,11 @@ function carregarAmostra(id) {
   return a;
 }
 
+const registrarDecisao = (a, acao, justificativa, usuario) => db.prepare('INSERT INTO decisoes (item_id, amostra_id, acao, preco_unitario, justificativa, usuario) VALUES (?, ?, ?, ?, ?, ?)')
+  .run(a.item_id, a.id, acao, a.preco_unitario, justificativa ?? null, usuario);
+
+// manual: false = desconsiderar (justificativa obrigatória) · true = considerar mesmo contra o critério · null = voltar ao critério.
+// Toda decisão vai para a trilha de auditoria (tabela decisoes) e pode ser revertida.
 rota('PUT', '/api/amostras/:id', async ({ req, p }) => {
   const a = carregarAmostra(Number(p.id));
   const b = await lerCorpo(req);
@@ -337,15 +435,31 @@ rota('PUT', '/api/amostras/:id', async ({ req, p }) => {
   if (b.manual !== undefined) { exigir([null, true, false].includes(b.manual), 'Valor de inclusão inválido.'); campos.manual = b.manual === null ? null : b.manual ? 1 : 0; }
   if (b.justificativa !== undefined) campos.justificativa = texto(b.justificativa, 2000);
   if (campos.manual === 0) exigir(campos.justificativa ?? a.justificativa, 'Justifique a exclusão manual (art. 6º, § 3º).');
-  atualizar('amostras', a.id, campos);
+  // Ao reconsiderar ou voltar ao critério, a justificativa da exclusão anterior deixa de valer (segue na trilha).
+  if (b.manual !== undefined && campos.manual !== 0 && b.justificativa === undefined) campos.justificativa = null;
+  const usuario = usuarioDe(req);
+  transacao(db, () => {
+    atualizar('amostras', a.id, campos);
+    if (b.manual !== undefined) registrarDecisao(a, campos.manual === 0 ? 'desconsiderar' : campos.manual === 1 ? 'considerar' : 'criterio', campos.justificativa, usuario);
+    else if (b.justificativa !== undefined) registrarDecisao(a, 'justificar', campos.justificativa, usuario);
+  });
   const it = carregarItem(a.item_id);
   tocarPesquisa(it.pesquisa_id);
   return itemComAnalise(it);
 });
-rota('DELETE', '/api/amostras/:id', ({ p }) => {
+rota('DELETE', '/api/amostras/:id', ({ req, p }) => {
   const a = carregarAmostra(Number(p.id));
-  db.prepare('DELETE FROM amostras WHERE id = ?').run(a.id);
-  return itemComAnalise(carregarItem(a.item_id));
+  transacao(db, () => {
+    registrarDecisao(a, 'remover', a.justificativa, usuarioDe(req));
+    db.prepare('DELETE FROM amostras WHERE id = ?').run(a.id);
+  });
+  const it = carregarItem(a.item_id);
+  tocarPesquisa(it.pesquisa_id);
+  return itemComAnalise(it);
+});
+rota('GET', '/api/itens/:id/historico', ({ p }) => {
+  const it = carregarItem(Number(p.id));
+  return db.prepare('SELECT id, amostra_id, acao, preco_unitario, justificativa, usuario, em FROM decisoes WHERE item_id = ? ORDER BY id DESC LIMIT 500').all(it.id);
 });
 
 // ---------------------------------------------------------------- servidor
@@ -365,7 +479,7 @@ async function servirEstatico(caminho, res) {
   }
   res.writeHead(200, {
     'content-type': TIPOS[extname(alvo)] || 'application/octet-stream',
-    'cache-control': 'no-cache',
+    'cache-control': extname(alvo) === '.woff2' ? 'public, max-age=31536000, immutable' : 'no-cache',
     'x-content-type-options': 'nosniff',
     'content-security-policy': "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'self'",
     'referrer-policy': 'same-origin',
@@ -404,8 +518,27 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     console.error(`Recusado: publicação sem login. Cadastre usuários em ${USUARIOS_ARQUIVO || 'USUARIOS="nome:senha;outro:senha"'}.`);
     process.exit(1);
   }
+  servidor.on('error', (e) => {
+    if (e.code === 'EADDRINUSE') {
+      console.error(`\nA porta ${PORTA} já está em uso.`);
+      console.error(`- Se o Banco de Preços LS já está aberto em outra janela, use-o em http://localhost:${PORTA}/ (não é preciso iniciar de novo).`);
+      console.error('- Se for outro programa, feche-o ou escolha outra porta: defina a variável PORT (ex.: PORT=5610) e inicie novamente.');
+    } else if (e.code === 'EACCES') {
+      console.error(`\nSem permissão para usar a porta ${PORTA}. Escolha uma porta acima de 1024 (variável PORT).`);
+    } else {
+      console.error(`\nNão foi possível iniciar o servidor: ${e.message}`);
+    }
+    process.exit(1);
+  });
   servidor.listen(PORTA, HOST, () => {
-    console.log(`Banco de Preços LS em http://${HOST === '127.0.0.1' ? 'localhost' : HOST}:${PORTA}`);
+    const endereco = `http://${HOST === '127.0.0.1' || HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORTA}/`;
+    console.log(`Banco de Preços LS em ${endereco}`);
+    if (DB_PATH !== ':memory:') console.log(`Dados em ${DB_PATH}`);
+    // INICIAR.cmd define ABRIR_NAVEGADOR=1: o navegador só abre aqui, depois que o servidor já está aceitando conexões.
+    if (process.env.ABRIR_NAVEGADOR === '1') {
+      const comando = process.platform === 'win32' ? `start "" "${endereco}"` : process.platform === 'darwin' ? `open "${endereco}"` : `xdg-open "${endereco}"`;
+      exec(comando, (erro) => { if (erro) console.log(`Abra ${endereco} no navegador.`); });
+    }
     const st = statusCatalogo(db);
     if (!st.materiais && !st.servicos) {
       console.log('[catalogo] índice vazio: baixando catálogos oficiais…');

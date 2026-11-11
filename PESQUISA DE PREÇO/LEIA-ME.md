@@ -22,9 +22,64 @@ Sistema local de pesquisa de preços em contratações públicas, com análise c
 - **PNCP** (https://pncp.gov.br) — itens de contratações de todas as esferas, buscados por palavras-chave.
 - Cotações de fornecedores, sites e outros portais podem ser lançadas manualmente (art. 5º, III a V).
 
-## Dados
+## Inicialização e portas
 
-Tudo fica em `data/pesquisa-precos.db` (SQLite) neste computador. Faça cópia de segurança desse arquivo.
+| Como inicia | Porta | Login | Para quê |
+| --- | --- | --- | --- |
+| `INICIAR.cmd` ou `npm start` | **5600** | desligado | uso local, só neste computador (`127.0.0.1`) |
+| `PUBLICAR.cmd` / `SERVIDOR-PUBLICADO.cmd` | **5601** | obrigatório (`usuarios.txt`) | acesso da equipe pelo Tailscale Funnel |
+| Render | definida pelo Render (`PORT`) | obrigatório (`USUARIOS`) | hospedagem na nuvem |
+
+- As duas portas podem ficar ligadas ao mesmo tempo e usam o mesmo banco de dados.
+- O `INICIAR.cmd` confere a porta antes de subir: se o sistema já estiver aberto, só abre o navegador;
+  se a porta estiver com outro programa, avisa e não inicia nada. Para usar outra porta:
+  `set PORT=5700` antes de chamar o `INICIAR.cmd` (ou `PORT=5700 npm start` no Linux/macOS).
+- Sem login configurado, o servidor só atende o próprio computador e recusa pedidos vindos de túnel/proxy.
+- Para encerrar, feche a janela do servidor (ou Ctrl+C).
+
+## Dados, backup e restauração
+
+Tudo fica em `data/pesquisa-precos.db` (SQLite) neste computador. A pasta `data/` não vai para o Git.
+
+**Backup automático.** O sistema grava uma cópia íntegra em `data/backups/pesquisa-precos-AAAAMMDD-HHMMSS.db`
+antes de gerar o mapa, exportar CSV, excluir pesquisa e excluir itens em lote (no máximo uma cópia por minuto).
+Nas exclusões, se a cópia falhar, nada é apagado. Ficam guardadas as 20 cópias mais recentes
+(`BACKUP_RETENCAO`). O rodapé da tela mostra o último backup e tem o botão **Fazer backup agora**.
+
+**Cópia externa.** As cópias automáticas ficam no mesmo disco; copie de tempos em tempos um arquivo de
+`data/backups/` para pendrive, rede ou nuvem (ou aponte `BACKUP_DIR` para uma pasta sincronizada).
+Não copie o `pesquisa-precos.db` "cru" com o sistema aberto: use os arquivos de `data/backups/`.
+
+**Restaurar.**
+
+1. Feche o servidor (janela do `INICIAR.cmd` e, se houver, o publicado na porta 5601).
+2. Em `data/`, renomeie o `pesquisa-precos.db` atual (ex.: `pesquisa-precos-antigo.db`) e apague, se
+   existirem, `pesquisa-precos.db-wal` e `pesquisa-precos.db-shm`.
+3. Copie o backup escolhido de `data/backups/` para `data/` e renomeie para `pesquisa-precos.db`.
+4. Abra o `INICIAR.cmd` e confira as pesquisas.
+
+## Variáveis de ambiente
+
+Todas são opcionais no uso local. O arquivo `.env.example` traz a lista comentada; o servidor **não** lê
+`.env` sozinho — defina as variáveis no sistema, no painel do Render ou rode
+`node --env-file=.env server/server.mjs`.
+
+| Variável | Padrão | Função |
+| --- | --- | --- |
+| `PORT` | `5600` | porta HTTP |
+| `HOST` | `127.0.0.1` | interface de rede (`0.0.0.0` no Render) |
+| `DB_PATH` | `data/pesquisa-precos.db` | arquivo do banco SQLite |
+| `BACKUP_DIR` | pasta `backups` ao lado do banco | onde gravar os backups |
+| `BACKUP_RETENCAO` | `20` | quantos backups manter |
+| `USUARIOS` | vazio | equipe: `nome:senha;outro:senha` (8+ caracteres); liga o login |
+| `USUARIOS_ARQUIVO` | vazio | arquivo com `nome:senha` por linha (usado pelo `PUBLICAR.cmd`) |
+| `FUSO_HORARIO` | fuso do computador | fuso da data de emissão do mapa (ex.: `America/Campo_Grande`) |
+| `ABRIR_NAVEGADOR` | vazio | `1` abre o navegador quando o servidor fica pronto |
+| `CACHE_TTL_HORAS` | `24` | validade do cache das consultas às APIs |
+| `CACHE_RETENCAO_DIAS` | `30` | limpeza do cache antigo |
+| `API_TENTATIVAS` | `4` | tentativas por consulta às APIs oficiais |
+| `API_TIMEOUT_MS` | `45000` | tempo limite de cada tentativa |
+| `API_ESPERA_BASE_MS` | `800` | espera inicial entre tentativas (cresce a cada nova tentativa) |
 
 ## Requisitos
 
@@ -32,7 +87,8 @@ Node.js 22.13 ou superior (usa o SQLite nativo do Node). Sem outras dependência
 
 ## Testes
 
-`npm test` — 36 testes (cálculos, clientes das APIs, integração HTTP, login, segurança).
+`npm test` — 98 testes (estatística e exclusão de discrepantes, clientes das APIs, integração HTTP,
+backup, CSV, mapa, inicialização, login e segurança).
 
 ## Publicar grátis a partir deste computador (Tailscale Funnel)
 
@@ -70,3 +126,27 @@ O arquivo `render.yaml` já descreve o serviço. Publicado, o sistema **exige lo
 
 Custo: plano Starter (≈ US$ 7/mês) + disco de 1 GB (≈ US$ 0,25/mês). Os dados ficam no disco
 `/var/data`; o Render faz snapshot diário dele.
+
+O `render.yaml` já define `FUSO_HORARIO=America/Campo_Grande` (o servidor do Render roda em UTC); ajuste
+se o órgão estiver em outro fuso, senão a data de emissão do mapa sai com o horário errado.
+
+## Checklist de deploy
+
+Antes de publicar (Tailscale ou Render):
+
+- [ ] `npm test` passa.
+- [ ] Node 22.13+ no computador/servidor (`node -v`).
+- [ ] Usuários cadastrados com senha de 8+ caracteres (`usuarios.txt` ou variável `USUARIOS`);
+      nada disso no Git.
+- [ ] `DB_PATH` aponta para disco persistente (no Render: `/var/data/pesquisa-precos.db`).
+- [ ] Backup recente copiado para fora do computador.
+
+Depois de publicar:
+
+- [ ] O endereço abre a tela de login e uma janela anônima **não** entra sem senha.
+- [ ] O selo do catálogo no topo mostra o catálogo carregado (ou use **Baixar catálogo**).
+- [ ] Uma busca real de preços devolve resultados do Compras.gov.br e do PNCP.
+- [ ] Gerar o mapa de uma pesquisa e salvar em PDF (A4 paisagem, cabeçalho, rodapé e numeração).
+- [ ] Exportar CSV e abrir no Excel (acentos corretos).
+- [ ] O rodapé mostra o backup criado por essas operações.
+- [ ] Tailscale: o computador não suspende/hiberna e a tarefa agendada sobe o servidor após reiniciar.

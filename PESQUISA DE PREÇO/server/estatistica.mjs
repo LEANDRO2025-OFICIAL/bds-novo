@@ -31,7 +31,7 @@ function quartil(ordenados, p) {
 /** Estatística descritiva. Desvio padrão AMOSTRAL (n-1), como DESVPAD.A do Excel. */
 export function resumo(valores) {
   const n = valores.length;
-  if (!n) return { n: 0, media: null, mediana: null, menor: null, maior: null, desvioPadrao: null, cv: null };
+  if (!n) return { n: 0, media: null, mediana: null, menor: null, maior: null, desvioPadrao: null, cv: null, q1: null, q3: null, iqr: null };
   const media = valores.reduce((s, x) => s + x, 0) / n;
   const variancia = n > 1 ? valores.reduce((s, x) => s + (x - media) ** 2, 0) / (n - 1) : 0;
   const desvioPadrao = Math.sqrt(variancia);
@@ -43,66 +43,84 @@ export function resumo(valores) {
     maior: Math.max(...valores),
     desvioPadrao,
     cv: media > 0 ? desvioPadrao / media : null,
+    ...quartis(valores),
   };
 }
 
+/** Quartis por interpolação linear (QUARTIL.INC) e amplitude interquartil. */
+export function quartis(valores) {
+  if (!valores.length) return { q1: null, q3: null, iqr: null };
+  const o = ordenar(valores);
+  const q1 = quartil(o, 0.25);
+  const q3 = quartil(o, 0.75);
+  return { q1, q3, iqr: q3 - q1 };
+}
+
+export const CRITERIOS = ['nenhum', 'desvio', 'iqr', 'mediana'];
+const numeroOu = (v, padrao) => (Number.isFinite(Number(v)) && v !== null && v !== '' ? Number(v) : padrao);
+const fmt = (n) => String(n).replace('.', ',');
+
 /**
- * Critérios objetivos para desconsiderar valores inexequíveis ou excessivamente
- * elevados (art. 6º, § 3º e § 4º). Devolve, para cada posição, se fica e por quê.
+ * Limites [min, max] do critério objetivo de exclusão (art. 6º, § 3º e § 4º).
  *
  * criterio:
  *   { tipo: 'nenhum' }
- *   { tipo: 'desvio', k: 1 }                         fora de média ± k·DP
+ *   { tipo: 'desvio', k: 1 }                         escore z: fora de média ± k·DP (DP amostral)
  *   { tipo: 'iqr', k: 1.5 }                          fora de [Q1 − k·IQR, Q3 + k·IQR] (Tukey)
  *   { tipo: 'mediana', inferior: 0.5, superior: 0.5 } abaixo de mediana·(1−inf) ou acima de mediana·(1+sup)
+ *
+ * aplicavel = false (com nota) quando o critério não tem como distinguir valores:
+ * menos de 3 preços, dispersão nula (todos iguais) ou amplitude interquartil zero.
  */
+export function limitesCriterio(valores, criterio = { tipo: 'nenhum' }) {
+  const fora = (nota) => ({ aplicavel: false, min: null, max: null, rotulo: '', nota });
+  const tipo = criterio?.tipo ?? 'nenhum';
+  if (tipo === 'nenhum' || !CRITERIOS.includes(tipo)) return fora(null);
+  if (valores.length < MINIMO_AMOSTRAS) return fora(`Critério não aplicado: são necessários ao menos ${MINIMO_AMOSTRAS} preços.`);
+
+  if (tipo === 'desvio') {
+    const k = numeroOu(criterio.k, 1);
+    const r = resumo(valores);
+    // Dispersão nula (ou só ruído de ponto flutuante): não há valor discrepante a apontar.
+    if (r.desvioPadrao <= Math.abs(r.media) * 1e-12) return fora('Critério não aplicado: todos os preços são iguais (desvio padrão zero).');
+    return { aplicavel: true, min: r.media - k * r.desvioPadrao, max: r.media + k * r.desvioPadrao, rotulo: `média ± ${fmt(k)} desvio(s) padrão`, nota: null };
+  }
+  if (tipo === 'iqr') {
+    const k = numeroOu(criterio.k, 1.5);
+    const { q1, q3, iqr } = quartis(valores);
+    // IQR zero: a cerca colapsaria em [Q1, Q3] e excluiria qualquer valor diferente da maioria.
+    if (iqr <= Math.abs(q3) * 1e-12) return fora('Critério não aplicado: amplitude interquartil igual a zero (metade central dos preços é idêntica). Use outro método ou exclua manualmente com justificativa.');
+    return { aplicavel: true, min: q1 - k * iqr, max: q3 + k * iqr, rotulo: `amplitude interquartil (${fmt(k)} × IQR)`, nota: null };
+  }
+  const med = mediana(valores);
+  const inf = numeroOu(criterio.inferior, 0.5);
+  const sup = numeroOu(criterio.superior, 0.5);
+  return { aplicavel: true, min: med * (1 - inf), max: med * (1 + sup), rotulo: `mediana −${Math.round(inf * 100)}% / +${Math.round(sup * 100)}%`, nota: null };
+}
+
+/** Para cada posição: se o preço fica na amostra e, se não, por quê. */
 export function avaliarOutliers(valores, criterio = { tipo: 'nenhum' }) {
   const resultado = valores.map(() => ({ mantido: true, motivo: null }));
-  if (valores.length < 3 || !criterio || criterio.tipo === 'nenhum') return resultado;
-
-  let min = -Infinity;
-  let max = Infinity;
-  let rotulo = '';
-  if (criterio.tipo === 'desvio') {
-    const k = criterio.k ?? 1;
-    const r = resumo(valores);
-    min = r.media - k * r.desvioPadrao;
-    max = r.media + k * r.desvioPadrao;
-    rotulo = `média ± ${k} desvio(s) padrão`;
-  } else if (criterio.tipo === 'iqr') {
-    const k = criterio.k ?? 1.5;
-    const o = ordenar(valores);
-    const q1 = quartil(o, 0.25);
-    const q3 = quartil(o, 0.75);
-    min = q1 - k * (q3 - q1);
-    max = q3 + k * (q3 - q1);
-    rotulo = `intervalo interquartil (k = ${k})`;
-  } else if (criterio.tipo === 'mediana') {
-    const med = mediana(valores);
-    const inf = criterio.inferior ?? 0.5;
-    const sup = criterio.superior ?? 0.5;
-    min = med * (1 - inf);
-    max = med * (1 + sup);
-    rotulo = `mediana −${Math.round(inf * 100)}% / +${Math.round(sup * 100)}%`;
-  } else {
-    return resultado;
-  }
-
+  const lim = limitesCriterio(valores, criterio);
+  if (!lim.aplicavel) return resultado;
+  // Tolerância relativa: um preço igual ao limite (a menos de erro de ponto flutuante) permanece.
+  const tol = (x) => Math.abs(x) * 1e-9;
   valores.forEach((v, i) => {
-    if (v < min) resultado[i] = { mantido: false, motivo: `inexequível: abaixo do limite (${rotulo})` };
-    else if (v > max) resultado[i] = { mantido: false, motivo: `excessivamente elevado: acima do limite (${rotulo})` };
+    if (v < lim.min - tol(lim.min)) resultado[i] = { mantido: false, motivo: `inexequível: abaixo do limite (${lim.rotulo})` };
+    else if (v > lim.max + tol(lim.max)) resultado[i] = { mantido: false, motivo: `excessivamente elevado: acima do limite (${lim.rotulo})` };
   });
   return resultado;
 }
 
 /**
  * Preço estimado pelo método escolhido (art. 6º, caput).
+ * Devolve também as três opções (média, mediana, menor) para comparação e `insuficiente` (< 3 preços válidos).
  * 'auto': média quando CV ≤ 25% (amostra homogênea), mediana caso contrário —
  * prática recorrente em orientações de controle externo.
  */
 export function precoEstimado(valores, metodo = 'auto') {
   const r = resumo(valores);
-  if (!r.n) return { metodo, metodoAplicado: null, valor: null, resumo: r, alertas: ['Nenhum preço válido na amostra.'] };
+  if (!r.n) return { metodo, metodoAplicado: null, valor: null, opcoes: { media: null, mediana: null, menor: null }, insuficiente: true, resumo: r, alertas: ['Nenhum preço válido na amostra.'] };
 
   let aplicado = metodo;
   if (metodo === 'auto') aplicado = r.cv !== null && r.cv <= 0.25 ? 'media' : 'mediana';
@@ -116,7 +134,8 @@ export function precoEstimado(valores, metodo = 'auto') {
     const cvTexto = arredondar(r.cv * 100, 1).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
     alertas.push(`Coeficiente de variação de ${cvTexto}%: amostra heterogênea; analise criticamente (art. 6º, § 3º).`);
   }
-  return { metodo, metodoAplicado: aplicado, valor: arredondar(valor), resumo: r, alertas };
+  const opcoes = { media: arredondar(r.media), mediana: arredondar(r.mediana), menor: arredondar(r.menor) };
+  return { metodo, metodoAplicado: aplicado, valor: arredondar(valor), opcoes, insuficiente: r.n < MINIMO_AMOSTRAS, resumo: r, alertas };
 }
 
 /**
@@ -125,6 +144,7 @@ export function precoEstimado(valores, metodo = 'auto') {
  */
 export function analisarItem(amostras, { criterio, metodo, quantidade = 1 } = {}) {
   const precos = amostras.map((a) => a.preco);
+  const limites = limitesCriterio(precos, criterio);
   const avaliacao = avaliarOutliers(precos, criterio);
   const decisoes = amostras.map((a, i) => {
     const automatico = avaliacao[i];
@@ -137,6 +157,7 @@ export function analisarItem(amostras, { criterio, metodo, quantidade = 1 } = {}
   });
   const validos = decisoes.filter((d) => d.incluida).map((d) => d.preco);
   const estimativa = precoEstimado(validos, metodo);
+  if (limites.nota) estimativa.alertas.push(limites.nota);
   const total = estimativa.valor === null ? null : arredondar(estimativa.valor * quantidade);
-  return { decisoes, estimativa, total };
+  return { decisoes, estimativa, total, limites, validas: validos.length, excluidas: decisoes.length - validos.length };
 }
