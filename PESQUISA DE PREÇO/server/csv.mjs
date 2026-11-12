@@ -1,3 +1,5 @@
+import { nomePortal } from './portal-origem.mjs';
+
 // Exportação CSV no padrão que o Excel em português abre com dois cliques:
 // separador ';', UTF-8 com BOM, decimais com vírgula, linhas CRLF (RFC 4180 nos demais pontos).
 
@@ -43,7 +45,7 @@ const NOME_METODO = { media: 'média', mediana: 'mediana', menor: 'menor preço'
 
 export const CABECALHO = [
   'Item', 'Descrição', 'Quantidade', 'Unidade', 'Registro', 'Data', 'Órgão', 'UF', 'Município', 'Fornecedor', 'CNPJ/CPF', 'Marca',
-  'Preço unitário', 'Considerada', 'Motivo/Justificativa', 'Fonte',
+  'Preço unitário', 'Considerada', 'Motivo/Justificativa', 'Fonte', 'Portal de origem',
   'Válidas', 'Excluídas', 'Média', 'Mediana', 'Menor', 'Maior', 'Desvio padrão', 'CV (%)', 'Preço recomendado', 'Critério', 'Total do item',
 ];
 
@@ -55,18 +57,72 @@ export function gerarCsv(p) {
     for (const a of it.amostras) {
       linhas.push([
         i + 1, it.descricao, it.quantidade, it.unidade || a.unidade, 'Amostra', a.data_compra, a.orgao, a.uf, a.municipio, a.fornecedor_nome, a.fornecedor_ni, a.marca,
-        dinheiro(a.preco_unitario), a.incluida ? 'Sim' : 'Não', [a.motivo, a.justificativa].filter(Boolean).join(' — '), a.link || a.origem,
+        dinheiro(a.preco_unitario), a.incluida ? 'Sim' : 'Não', [a.motivo, a.justificativa].filter(Boolean).join(' — '), a.link || a.origem, nomePortal(a.portal_origem),
         ...vazio(11),
       ]);
     }
     const r = it.estimativa.resumo;
     linhas.push([
-      i + 1, it.descricao, it.quantidade, it.unidade, 'RESUMO', ...vazio(11),
+      i + 1, it.descricao, it.quantidade, it.unidade, 'RESUMO', ...vazio(12),
       r.n, it.amostras.length - r.n, dinheiro(r.media), dinheiro(r.mediana), dinheiro(r.menor), dinheiro(r.maior), dinheiro(r.desvioPadrao),
       r.cv === null || r.cv === undefined ? null : { numero: r.cv * 100, casas: 1 },
       dinheiro(it.estimativa.valor), NOME_METODO[it.estimativa.metodoAplicado] || '', dinheiro(it.total),
     ]);
   });
-  linhas.push(['', 'VALOR TOTAL ESTIMADO', ...vazio(24), dinheiro(p.totalGeral)]);
+  linhas.push(['', 'VALOR TOTAL ESTIMADO', ...vazio(25), dinheiro(p.totalGeral)]);
   return montarCsv(linhas);
+}
+
+// ---------------------------------------------------------------- leitura (importação)
+
+/** Separador mais provável (';', ',' ou tab): o que mais aparece na 1ª linha fora de aspas. Padrão ';'. */
+export function detectarSeparador(texto) {
+  const conta = { ';': 0, ',': 0, '\t': 0 };
+  let aspas = false;
+  for (const c of texto) {
+    if (c === '"') aspas = !aspas;
+    else if (!aspas && (c === '\n' || c === '\r')) break;
+    else if (!aspas && c in conta) conta[c] += 1;
+  }
+  const [melhor, vezes] = Object.entries(conta).sort((a, b) => b[1] - a[1])[0];
+  return vezes > 0 ? melhor : SEPARADOR;
+}
+
+/**
+ * Texto CSV → matriz de linhas (RFC 4180: campos entre aspas, "" = aspas, quebra de linha dentro de aspas).
+ * Aceita BOM, CRLF/LF/CR e separador ';', ',' ou tab (detectado se não for informado).
+ * Cada linha devolvida traz `numero` (linha do arquivo onde começa, 1 = primeira) para os relatórios de erro.
+ * Linhas totalmente vazias são descartadas. O apóstrofo de proteção contra fórmulas (posto por csvCampo) é retirado.
+ */
+export function lerCsv(texto, { separador = null } = {}) {
+  const t = String(texto ?? '').replace(/^﻿/, '');
+  const sep = separador || detectarSeparador(t);
+  const linhas = [];
+  let campos = [];
+  let campo = '';
+  let aspas = false;
+  let comAspas = false;
+  let numero = 1;
+  let inicio = 1;
+  const fecharCampo = () => { campos.push(comAspas ? campo : campo.trim()); campo = ''; comAspas = false; };
+  const fecharLinha = () => {
+    fecharCampo();
+    if (campos.some((c) => c !== '')) linhas.push(Object.assign(campos.map((c) => c.replace(/^'(?=[=+\-@])/, '')), { numero: inicio }));
+    campos = [];
+  };
+  for (let i = 0; i < t.length; i++) {
+    const c = t[i];
+    if (aspas) {
+      if (c === '"' && t[i + 1] === '"') { campo += '"'; i++; } else if (c === '"') aspas = false;
+      else { if (c === '\n') numero++; campo += c; }
+    } else if (c === '"' && campo.trim() === '') { aspas = true; comAspas = true; campo = ''; } else if (c === sep) fecharCampo();
+    else if (c === '\n' || c === '\r') {
+      if (c === '\r' && t[i + 1] === '\n') i++;
+      fecharLinha();
+      numero++;
+      inicio = numero;
+    } else campo += c;
+  }
+  if (campo !== '' || campos.length) fecharLinha();
+  return linhas;
 }

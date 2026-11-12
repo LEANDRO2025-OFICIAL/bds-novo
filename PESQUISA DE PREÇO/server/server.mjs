@@ -5,11 +5,14 @@ import { existsSync, readFileSync } from 'node:fs';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { abrirBanco, transacao } from './db.mjs';
-import { consultarPrecos, limparCacheAntigo, ErroApi } from './compras.mjs';
-import { consultarPrecosPncp } from './pncp.mjs';
+import { limparCacheAntigo, ErroApi } from './compras.mjs';
+import { importarCsv } from './importacao.mjs';
+import { PORTAIS } from './portal-origem.mjs';
+import { buscarNaFonte, descreverFontes, idsDiretas, obterFonte } from './fontes.mjs';
 import { atualizarCatalogo, buscarCatalogo, statusCatalogo } from './catalogo.mjs';
 import { analisarItem } from './estatistica.mjs';
 import { gerarCsv } from './csv.mjs';
+import { classificarPortal, coberturaPorPortal, nomePortal, portalValido } from './portal-origem.mjs';
 import { criarBackup, listarBackups, pastaBackups } from './backup.mjs';
 import { renderizarMapa } from './mapa.mjs';
 import { randomBytes } from 'node:crypto';
@@ -68,7 +71,7 @@ async function lerCorpo(req) {
   const partes = [];
   for await (const p of req) {
     tamanho += p.length;
-    if (tamanho > 1_000_000) throw new ErroHttp(413, 'Corpo da requisição muito grande.');
+    if (tamanho > 1_000_000) throw new ErroHttp(413, 'Corpo da requisição muito grande (máximo de 1 MB).');
     partes.push(p);
   }
   if (!partes.length) return {};
@@ -103,10 +106,12 @@ function itemComAnalise(item) {
     { criterio, metodo: item.metodo, quantidade: item.quantidade },
   );
   const porId = new Map(analise.decisoes.map((d) => [d.id, d]));
+  const comDecisao = amostras.map((a) => ({ ...a, portal_nome: nomePortal(a.portal_origem), incluida: porId.get(a.id).incluida, motivo: porId.get(a.id).motivo }));
   return {
     ...item,
     criterio,
-    amostras: amostras.map((a) => ({ ...a, incluida: porId.get(a.id).incluida, motivo: porId.get(a.id).motivo })),
+    amostras: comDecisao,
+    cobertura: coberturaPorPortal(comDecisao), // amostras por portal de origem (e quantas sem origem identificável)
     estimativa: analise.estimativa,
     total: analise.total,
     limites: analise.limites,
@@ -118,7 +123,7 @@ function carregarPesquisa(id) {
   if (!p) throw new ErroHttp(404, 'Pesquisa não encontrada.');
   const itens = db.prepare('SELECT * FROM itens WHERE pesquisa_id = ? ORDER BY ordem, id').all(id).map(itemComAnalise);
   const totalGeral = itens.reduce((s, i) => s + (i.total || 0), 0);
-  return { ...p, criterio_padrao: lerCriterio(p.criterio_padrao), itens, totalGeral: Math.round(totalGeral * 100) / 100 };
+  return { ...p, criterio_padrao: lerCriterio(p.criterio_padrao), itens, cobertura: coberturaPorPortal(itens.flatMap((i) => i.amostras)), totalGeral: Math.round(totalGeral * 100) / 100 };
 }
 
 function lerCriterio(textoJson) {
@@ -209,10 +214,9 @@ rota('GET', '/api/catalogo/buscar', ({ url }) => {
 
 /** Consulta as fontes pedidas em paralelo; uma fonte fora do ar vira aviso se a outra respondeu. */
 async function consultarFontes(fontes, filtros, opcoes = {}) {
-  const nomes = { compras: 'Compras.gov.br', pncp: 'PNCP' };
-  // termoPncp: texto da busca no PNCP quando o usuário não deu palavras-chave (não filtra o Compras.gov.br)
-  const consultas = { compras: consultarPrecos, pncp: (d, f, o) => consultarPrecosPncp(d, { ...f, palavras: f.palavras || f.termoPncp }, o) };
-  const res = await Promise.allSettled(fontes.map((f) => consultas[f](db, filtros, opcoes)));
+  // Todas as fontes passam pelo mesmo contrato (server/fontes.mjs); só as de modo 'direta' têm consulta própria.
+  const nomes = Object.fromEntries(fontes.map((f) => [f, obterFonte(f).nome]));
+  const res = await Promise.allSettled(fontes.map((f) => buscarNaFonte(f, db, filtros, opcoes)));
   const ok = res.flatMap((r, i) => (r.status === 'fulfilled' ? [{ fonte: fontes[i], ...r.value }] : []));
   if (!ok.length) throw res[0].reason;
   const avisos = res.flatMap((r, i) => (r.status === 'rejected' ? [`${nomes[fontes[i]]} indisponível: ${r.reason.message}`] : []));
@@ -224,8 +228,10 @@ async function consultarFontes(fontes, filtros, opcoes = {}) {
   const doCompras = new Set(ok.filter((r) => r.fonte === 'compras').flatMap((r) => r.registros.map(chave)));
   const registros = ok.flatMap((r) => (r.fonte === 'pncp' ? r.registros.filter((x) => !doCompras.has(chave(x))) : r.registros));
   registros.sort((a, b) => String(b.dataCompra).localeCompare(String(a.dataCompra)));
+  for (const x of registros) x.portalNome = nomePortal(x.portalOrigem);
   return {
     registros,
+    cobertura: coberturaPorPortal(registros), // do que a consulta devolveu, antes de qualquer seleção
     totalNaFonte: ok.reduce((s, r) => s + r.totalNaFonte, 0),
     truncado: ok.some((r) => r.truncado),
     avisos: [...ok.flatMap((r) => r.avisos || []), ...avisos],
@@ -234,6 +240,9 @@ async function consultarFontes(fontes, filtros, opcoes = {}) {
     consultadoEm: new Date().toISOString(),
   };
 }
+
+// Fontes registradas e seu estado real: consulta direta ou apenas via PNCP (sem chamada ao portal).
+rota('GET', '/api/fontes', () => ({ fontes: descreverFontes(), diretas: idsDiretas(), portais: PORTAIS.map(({ id, nome }) => ({ id, nome })) }));
 
 rota('GET', '/api/precos', async ({ url }) => {
   const q = Object.fromEntries(url.searchParams);
@@ -392,29 +401,54 @@ rota('DELETE', '/api/itens/:id', ({ p }) => {
   return { ok: true };
 });
 
-rota('POST', '/api/itens/:id/amostras', async ({ req, p }) => {
-  const it = carregarItem(Number(p.id));
-  const b = await lerCorpo(req);
-  exigir(Array.isArray(b.amostras) && b.amostras.length > 0, 'Envie ao menos uma amostra.');
-  exigir(b.amostras.length <= 500, 'Máximo de 500 amostras por envio.');
-  const ins = db.prepare(`INSERT OR IGNORE INTO amostras (item_id, origem, chave_origem, data_compra, orgao, uasg, uf, municipio, fornecedor_ni, fornecedor_nome, marca, descricao, unidade, quantidade, preco_unitario, objeto, link)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+/** Grava amostras normalizadas no item (ignora as que já existem pela chave de origem). Devolve quantas entraram. */
+function gravarAmostras(itemId, amostras) {
+  const ins = db.prepare(`INSERT OR IGNORE INTO amostras (item_id, origem, chave_origem, data_compra, orgao, uasg, uf, municipio, fornecedor_ni, fornecedor_nome, marca, descricao, unidade, quantidade, preco_unitario, objeto, link, portal_origem)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
   let inseridas = 0;
   transacao(db, () => {
-    for (const a of b.amostras) {
+    for (const a of amostras) {
       const preco = Number(a.precoUnitario);
       exigir(Number.isFinite(preco) && preco >= 0, 'Preço unitário inválido.');
       const origem = texto(a.origem, 40) || 'manual';
       const chave = texto(a.chaveOrigem, 120) || `manual-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       exigir(!a.dataCompra || DATA_RE.test(a.dataCompra), 'Data da amostra inválida.');
-      const r = ins.run(it.id, origem, chave, a.dataCompra || null, texto(a.orgao), texto(a.uasg, 20), texto(a.uf, 2), texto(a.municipio, 120),
+      // Portal de origem: o informado (se for um id conhecido) ou o deduzido da fonte e do link. Nunca fica vazio.
+      const link = linkSeguro(a.link);
+      const portal = portalValido(a.portalOrigem) ? a.portalOrigem : classificarPortal({ origem, link, linkSistemaOrigem: a.linkSistemaOrigem, sistema: a.sistemaOrigem });
+      const r = ins.run(itemId, origem, chave, a.dataCompra || null, texto(a.orgao), texto(a.uasg, 20), texto(a.uf, 2), texto(a.municipio, 120),
         texto(a.fornecedorNi, 20), texto(a.fornecedorNome, 300), texto(a.marca, 200), texto(a.descricao, 4000), texto(a.unidade, 60),
-        numero(a.quantidade), preco, texto(a.objeto, 2000), linkSeguro(a.link));
+        numero(a.quantidade), preco, texto(a.objeto, 2000), link, portal);
       inseridas += Number(r.changes);
     }
   });
+  return inseridas;
+}
+
+rota('POST', '/api/itens/:id/amostras', async ({ req, p }) => {
+  const it = carregarItem(Number(p.id));
+  const b = await lerCorpo(req);
+  exigir(Array.isArray(b.amostras) && b.amostras.length > 0, 'Envie ao menos uma amostra.');
+  exigir(b.amostras.length <= 500, 'Máximo de 500 amostras por envio.');
+  const inseridas = gravarAmostras(it.id, b.amostras);
   tocarPesquisa(it.pesquisa_id);
   return { inseridas, ignoradas: b.amostras.length - inseridas, item: itemComAnalise(carregarItem(it.id)) };
+});
+
+// Importação manual: CSV exportado pelo usuário de qualquer portal. simular = true só confere e devolve o relatório.
+// Linhas com erro nunca são gravadas; as válidas entram com origem "importacao-csv" e o portal escolhido.
+rota('POST', '/api/itens/:id/importar', async ({ req, p }) => {
+  const it = carregarItem(Number(p.id));
+  const b = await lerCorpo(req);
+  exigir(typeof b.csv === 'string', 'Envie o conteúdo do arquivo CSV.');
+  const relatorio = importarCsv(b.csv, { portal: b.portal });
+  exigir(relatorio.ok, relatorio.erro);
+  const resumo = { ...relatorio, validas: relatorio.validas.map(({ linha, avisos, amostra }) => ({ linha, avisos, precoUnitario: amostra.precoUnitario, dataCompra: amostra.dataCompra, fornecedorNome: amostra.fornecedorNome, portalOrigem: amostra.portalOrigem })) };
+  if (b.simular) return { simulado: true, relatorio: resumo };
+  exigir(relatorio.validas.length > 0, 'Nenhuma linha válida para importar. Veja os erros por linha.');
+  const inseridas = gravarAmostras(it.id, relatorio.validas.map((v) => v.amostra));
+  tocarPesquisa(it.pesquisa_id);
+  return { simulado: false, inseridas, jaExistentes: relatorio.validas.length - inseridas, relatorio: resumo, item: itemComAnalise(carregarItem(it.id)) };
 });
 
 function carregarAmostra(id) {

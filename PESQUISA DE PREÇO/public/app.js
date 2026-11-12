@@ -33,7 +33,7 @@ const CRITERIOS = [
   ['mediana', '% da mediana', 'Exclui o que se afastar da mediana além de um percentual.'],
 ];
 const NOME_CRITERIO = Object.fromEntries(CRITERIOS.map(([k, n]) => [k, n]));
-const NOME_ORIGEM = { 'compras.gov.br': 'Compras.gov.br', pncp: 'PNCP', 'cotacao-fornecedor': 'Cotação', 'midia-especializada': 'Mídia especializada', 'site-eletronico': 'Site', 'contratacao-similar': 'Contratação similar', 'nota-fiscal': 'Nota fiscal', manual: 'Manual' };
+const NOME_ORIGEM = { 'compras.gov.br': 'Compras.gov.br', pncp: 'PNCP', 'cotacao-fornecedor': 'Cotação', 'midia-especializada': 'Mídia especializada', 'site-eletronico': 'Site', 'contratacao-similar': 'Contratação similar', 'nota-fiscal': 'Nota fiscal', manual: 'Manual', 'importacao-csv': 'Planilha importada' };
 const NOME_ACAO = { desconsiderar: 'Desconsiderada', considerar: 'Considerada manualmente', criterio: 'Devolvida ao critério automático', justificar: 'Justificativa registrada', remover: 'Removida da pesquisa' };
 
 const LOADER = '<svg class="loader" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="4.5" height="15" rx="1"/><rect x="9.75" y="6" width="4.5" height="15" rx="1"/><rect x="16.5" y="6" width="4.5" height="15" rx="1"/><line x1="1" y1="4" x2="23" y2="4"/></svg>';
@@ -552,6 +552,7 @@ async function telaPesquisa(id) {
       </div>
     </header>
     <dl class="indicadores slide-up" id="p-indicadores"></dl>
+    <div id="p-cobertura"></div>
     <section class="secao" aria-labelledby="t-itens">
       <div class="secao__topo">
         <div><span class="overline">Composição</span><h2 id="t-itens">Itens</h2></div>
@@ -608,6 +609,7 @@ async function telaPesquisa(id) {
       <div class="indicador ${pend ? 'indicador--alerta' : ''}"><dt>Itens com menos de 3 preços</dt><dd><span data-contar="${pend}">0</span></dd></div>
       <div class="indicador indicador--acento"><dt>Valor total estimado</dt><dd>R$ <span data-contar="${p.totalGeral}" data-formato="moeda">0,00</span></dd></div>`;
     contar($('#p-indicadores'));
+    $('#p-cobertura').innerHTML = htmlCobertura(p.cobertura, { titulo: 'Cobertura da pesquisa por portal de origem' });
     $('#padroes-item').textContent = `Padrão desta pesquisa: ${METODOS.find(([v]) => v === p.metodo_padrao)?.[1] || 'Automático'} · ${NOME_CRITERIO[p.criterio_padrao?.tipo] || 'Nenhum'}`;
   }
 
@@ -835,17 +837,61 @@ function htmlAlertas(it) {
   return it.estimativa.alertas.map((a) => `<div class="nota ${/não aplicado/.test(a) ? 'nota--neutra' : ''}" role="status">${esc(a)}</div>`).join('');
 }
 
-function htmlAmostras(it) {
+/** Selo do portal de origem. "pncp" = publicado no PNCP sem pista do sistema em que a disputa ocorreu. */
+function seloPortal(id, nome) {
+  if (!id) return '<span class="secundario">—</span>';
+  if (id === 'pncp') return '<span class="selo selo--liso selo--ambar" title="Publicado no PNCP; o sistema de origem não foi informado ou não é reconhecido">não identificado</span>';
+  if (id === 'outro') return '<span class="selo selo--liso" title="Cotação direta, site ou outro sistema">outro</span>';
+  return `<span class="selo selo--liso">${esc(nome || id)}</span>`;
+}
+
+/**
+ * Resumo de cobertura: amostras por portal de origem, com os zeros à mostra, e quantas não têm origem identificável.
+ * `c` vem do servidor ({ total, identificadas, semOrigem, outros, porPortal }); `unidade` = ['amostra', 'amostras'] ou ['preço', 'preços'].
+ */
+function htmlCobertura(c, { titulo = 'Cobertura por portal de origem', unidade = ['amostra', 'amostras'], comConsideradas = true } = {}) {
+  if (!c || !c.total) return '';
+  const portais = c.porPortal.filter((l) => l.portal !== 'pncp' && l.portal !== 'outro');
+  const linha = (rotulo, n, consideradas, classe = '') => `<li class="${n ? '' : 'zero'} ${classe}"><strong class="mono">${n}</strong><span>${esc(rotulo)}</span>${comConsideradas && n ? `<small>${consideradas} no cálculo</small>` : ''}</li>`;
+  const de = (id) => c.porPortal.find((l) => l.portal === id) || { amostras: 0, consideradas: 0 };
+  return `<div class="cobertura" role="group" aria-label="${esc(titulo)}">
+    <span class="overline">${esc(titulo)}</span>
+    <ul class="cobertura__lista">
+      ${portais.map((l) => linha(l.nome, l.amostras, l.consideradas)).join('')}
+      ${linha('Sem origem identificável (PNCP)', c.semOrigem, de('pncp').consideradas, 'cobertura--alerta')}
+      ${linha('Outras fontes', c.outros, de('outro').consideradas)}
+    </ul>
+    <p class="ajuda">${c.identificadas} de ${plural(c.total, unidade[0], unidade[1])} com portal de origem identificado${c.semOrigem ? ` · ${c.semOrigem} sem origem identificável (publicadas no PNCP sem indicação reconhecida do sistema onde ocorreu a disputa)` : ''}. Os portais privados só aparecem aqui pelo que publicaram no PNCP; a consulta direta a eles não está implementada.</p>
+  </div>`;
+}
+
+/** Seletor "Portal de origem" com a contagem de cada portal presente em `linhas` ([{ id, nome }]). */
+function htmlFiltroPortal(idCampo, linhas, atual) {
+  const conta = new Map();
+  for (const { id, nome } of linhas) { const c = conta.get(id) || { nome, n: 0 }; c.n += 1; conta.set(id, c); }
+  if (conta.size < 2 && !atual) return '';
+  const rotulo = (id, nome) => (id === 'pncp' ? 'PNCP — origem não identificada' : id === 'outro' ? 'Outro / não se aplica' : nome || id);
+  return `<div class="campo filtro-portal"><label for="${idCampo}">Portal de origem</label><select id="${idCampo}">
+    <option value="">Todos (${linhas.length})</option>
+    ${[...conta].map(([id, c]) => `<option value="${esc(id)}" ${atual === id ? 'selected' : ''}>${esc(rotulo(id, c.nome))} (${c.n})</option>`).join('')}
+    ${atual && !conta.has(atual) ? `<option value="${esc(atual)}" selected>${esc(atual)} (0)</option>` : ''}</select></div>`;
+}
+
+function htmlAmostras(it, filtroPortal = '') {
   if (!it.amostras.length) return '<div class="vazio painel"><h3>Nenhuma amostra</h3><p>Busque preços na coleta acima e adicione os compatíveis com o item, ou lance uma cotação manual.</p></div>';
-  return `<div class="tabela-wrap"><table class="tabela--fichas">
-    <thead><tr><th class="num">Nº</th><th class="num">Preço unit.</th><th>Situação</th><th>Data</th><th>Órgão / local</th><th>Fornecedor</th><th>Ações</th></tr></thead>
-    <tbody>${it.amostras.map((a, i) => `<tr class="${a.incluida ? '' : 'excluida'}">
+  const visiveis = it.amostras.map((a, i) => ({ a, i })).filter(({ a }) => !filtroPortal || a.portal_origem === filtroPortal);
+  return `${htmlFiltroPortal('filtro-portal-amostras', it.amostras.map((a) => ({ id: a.portal_origem || 'outro', nome: a.portal_nome })), filtroPortal)}
+    ${filtroPortal ? `<p class="ajuda" role="status">Mostrando ${visiveis.length} de ${plural(it.amostras.length, 'amostra', 'amostras')}. O filtro é só de exibição: o cálculo usa todas as amostras consideradas.</p>` : ''}
+    <div class="tabela-wrap"><table class="tabela--fichas">
+    <thead><tr><th class="num">Nº</th><th class="num">Preço unit.</th><th>Situação</th><th>Data</th><th>Órgão / local</th><th>Portal de origem</th><th>Fornecedor</th><th>Ações</th></tr></thead>
+    <tbody>${visiveis.map(({ a, i }) => `<tr class="${a.incluida ? '' : 'excluida'}">
       <td class="num secundario" data-rotulo="Nº">${i + 1}</td>
       <td class="num preco" data-rotulo="Preço unitário"><strong>${moeda(a.preco_unitario)}</strong></td>
       <td data-rotulo="Situação">${a.incluida ? `<span class="selo selo--musgo">${a.manual === 1 ? 'mantida manualmente' : 'considerada'}</span>` : `<span class="selo selo--cobre">excluída${a.manual === 0 ? ' manualmente' : ' pelo critério'}</span>`}
         ${a.motivo || a.justificativa ? `<span class="motivo">${a.motivo ? esc(a.motivo) : ''}${a.justificativa ? `<em>Justificativa: ${esc(a.justificativa)}</em>` : ''}</span>` : ''}</td>
       <td class="mono" data-rotulo="Data"><span>${data(a.data_compra)}</span></td>
       <td class="desc"><span>${esc(a.orgao || NOME_ORIGEM[a.origem] || a.origem)}</span><small>${esc([NOME_ORIGEM[a.origem] || a.origem, [a.municipio, a.uf].filter(Boolean).join('/')].filter(Boolean).join(' · '))}${a.link ? ` · <a href="${esc(a.link)}" target="_blank" rel="noopener noreferrer">ver fonte ↗</a>` : ''}</small></td>
+      <td data-rotulo="Portal de origem">${seloPortal(a.portal_origem, a.portal_nome)}</td>
       <td data-rotulo="Fornecedor"><span>${esc(a.fornecedor_nome || '—')}</span>${a.marca ? `<small>Marca: ${esc(a.marca)}</small>` : ''}</td>
       <td class="sem-rotulo"><div class="botoes">
         ${a.incluida
@@ -883,7 +929,7 @@ async function telaItem(id) {
   const pref = preferencias();
   const hoje = new Date();
   const umAno = new Date(hoje); umAno.setFullYear(hoje.getFullYear() - 1);
-  const estado = { resultados: [], consulta: null, ultimoValor: 0 };
+  const estado = { resultados: [], consulta: null, ultimoValor: 0, portalAmostras: '', portalResultados: '' };
 
   main.innerHTML = `
     <nav class="migalha" aria-label="Navegação"><a href="#/">Pesquisas</a><span aria-hidden="true">/</span><a href="#/pesquisa/${pesquisa.id}">${esc(pesquisa.titulo.length > 44 ? `${pesquisa.titulo.slice(0, 42)}…` : pesquisa.titulo)}</a><span aria-hidden="true">/</span><span aria-current="page">Item ${posicao}</span></nav>
@@ -906,6 +952,7 @@ async function telaItem(id) {
       </form>
       <p class="ajuda" id="crit-desc"></p>
       <div id="lista-amostras"></div>
+      <div id="cobertura-item"></div>
       <details id="det-trilha"><summary>Trilha de decisões (auditoria)</summary><div class="details__corpo" id="trilha"></div></details>
       <details><summary>Lançar cotação de outra fonte (fornecedor, site, nota fiscal)</summary>
         <div class="details__corpo"><form id="form-manual" class="campos">
@@ -917,6 +964,16 @@ async function telaItem(id) {
           <div class="campo"><label for="m-link">Link</label><input id="m-link" name="link" type="url" maxlength="500" placeholder="https://"></div>
           <div class="campo campo--largo"><label for="m-desc">Descrição do produto cotado</label><input id="m-desc" name="descricao" maxlength="4000"></div>
           <div class="botoes campo--largo"><button class="btn btn--secundario" type="submit">${IC.mais} Adicionar cotação</button></div>
+        </form></div>
+      </details>
+      <details id="det-importar"><summary>Importar planilha CSV de preços (exportada de qualquer portal)</summary>
+        <div class="details__corpo"><form id="form-importar" class="campos">
+          <div class="campo campo--largo"><label for="imp-arq">Arquivo CSV<span class="obrig" aria-hidden="true">*</span></label><input id="imp-arq" name="arquivo" type="file" accept=".csv,.txt,text/csv,text/plain" required aria-describedby="a-imp">
+            <span class="ajuda" id="a-imp">Primeira linha com os nomes das colunas. Obrigatória: <strong>Preço unitário</strong>. Reconhecidas: Data, Órgão, UF, Município, Fornecedor, CNPJ/CPF, Marca, Descrição, Unidade, Quantidade, Link. Separador ; , ou tab; decimais com vírgula. Planilha .xlsx: salve antes como CSV. Máximo de 1.000 linhas e 1 MB.</span></div>
+          <div class="campo"><label for="imp-portal">Portal de origem dos preços<span class="obrig" aria-hidden="true">*</span></label><select id="imp-portal" name="portal" required><option value="">Escolha…</option></select></div>
+          <div class="botoes campo--largo"><button class="btn btn--secundario" type="submit" id="btn-imp-conferir">Conferir arquivo</button>
+            <button class="btn btn--primario" type="button" id="btn-imp-gravar" hidden>Importar linhas válidas</button></div>
+          <div class="campo--largo" id="imp-relatorio" aria-live="polite"></div>
         </form></div>
       </details>
     </section>
@@ -948,6 +1005,8 @@ async function telaItem(id) {
             <div class="botoes campo--largo"><button class="btn btn--primario" type="submit" id="btn-buscar">${IC.lupa.replace('<svg', '<svg class="icone"')} Buscar preços</button>
               <button class="btn btn--fantasma" type="submit" id="btn-atualizar" name="atualizar" value="1" title="Ignora o cache local e consulta a fonte de novo">Atualizar da fonte</button></div>
           </form>
+          <details id="det-fontes"><summary>Fontes e portais: o que é consulta direta e o que vem via PNCP</summary>
+            <div class="details__corpo" id="lista-fontes"><p class="ajuda">${LOADER} Carregando…</p></div></details>
         </div>
       </div>
       <div id="res-precos" class="secao" aria-live="polite"></div>
@@ -975,7 +1034,9 @@ async function telaItem(id) {
     estado.ultimoValor = it.estimativa.valor ?? 0;
     $('#alertas').innerHTML = htmlAlertas(it);
     $('#alertas').hidden = !it.estimativa.alertas.length;
-    $('#lista-amostras').innerHTML = htmlAmostras(it);
+    if (estado.portalAmostras && !it.amostras.some((a) => a.portal_origem === estado.portalAmostras)) estado.portalAmostras = '';
+    $('#lista-amostras').innerHTML = htmlAmostras(it, estado.portalAmostras);
+    $('#cobertura-item').innerHTML = htmlCobertura(it.cobertura);
     const lim = it.limites;
     $('#crit-desc').textContent = it.criterio.tipo === 'nenhum' ? 'Sem exclusão automática: desconsidere manualmente o que não for compatível, sempre com justificativa.'
       : lim?.aplicavel ? `Faixa admitida: ${moeda(Math.max(0, lim.min))} a ${moeda(lim.max)} (${lim.rotulo}). O que ficar fora é desconsiderado automaticamente — e pode ser reconsiderado.` : (lim?.nota || '');
@@ -1100,27 +1161,122 @@ async function telaItem(id) {
     if (!r) return;
     const jaTem = new Set(it.amostras.map((a) => a.chave_origem));
     const regs = estado.resultados;
+    if (estado.portalResultados && !regs.some((x) => x.portalOrigem === estado.portalResultados)) estado.portalResultados = '';
+    const fp = estado.portalResultados;
     $('#res-precos').innerHTML = `
       <div class="secao__topo"><div><span class="overline">Resultado da consulta</span><h3>${plural(regs.length, 'preço encontrado', 'preços encontrados')}${r.totalNaFonte !== regs.length ? ` <span class="secundario pequeno">de ${r.totalNaFonte} na fonte</span>` : ''}</h3></div></div>
       <div class="origem-cache" id="origem-cache">${(r.fontes || []).map(seloCache).join('')}</div>
       ${(r.fontes || []).some((f) => f.cache?.obsoleto) ? '<div class="nota">A fonte oficial não respondeu após as novas tentativas. Os preços abaixo são da <strong>última consulta guardada</strong> neste computador; confira a data antes de usar e tente “Atualizar da fonte” mais tarde.</div>' : ''}
       ${r.truncado ? '<div class="nota nota--neutra">Resultado limitado aos registros mais recentes; refine os filtros.</div>' : ''}
       ${(r.avisos || []).map((a) => `<div class="nota nota--neutra">${esc(a)}</div>`).join('')}
+      ${htmlCobertura(r.cobertura, { titulo: 'Cobertura desta consulta por portal de origem', unidade: ['preço', 'preços'], comConsideradas: false })}
       ${regs.length ? `
       <div class="botoes secao__topo"><button type="button" class="btn btn--primario" id="btn-add-sel" disabled>Adicionar selecionadas</button>
-        <label class="auto-linha"><input type="checkbox" id="sel-todas"> selecionar todas</label></div>
+        <label class="auto-linha"><input type="checkbox" id="sel-todas"> selecionar todas${fp ? ' (do portal filtrado)' : ''}</label>
+        ${htmlFiltroPortal('filtro-portal-resultados', regs.map((x) => ({ id: x.portalOrigem || 'outro', nome: x.portalNome })), fp)}</div>
       <div class="tabela-wrap"><table class="tabela--fichas">
-        <thead><tr><th class="col-sel"><span class="oculto-visual">Selecionar</span></th><th class="num">Preço unit.</th><th>Data</th><th>Fonte</th><th>Órgão / local</th><th>Descrição</th><th>Unid.</th><th class="num">Qtd.</th></tr></thead>
-        <tbody>${regs.map((x, i) => `<tr>
+        <thead><tr><th class="col-sel"><span class="oculto-visual">Selecionar</span></th><th class="num">Preço unit.</th><th>Data</th><th>Fonte</th><th>Portal de origem</th><th>Órgão / local</th><th>Descrição</th><th>Unid.</th><th class="num">Qtd.</th></tr></thead>
+        <tbody>${regs.map((x, i) => (fp && x.portalOrigem !== fp ? '' : `<tr>
           <td class="col-sel">${jaTem.has(x.chaveOrigem) ? '<span class="selo selo--musgo selo--liso" title="Já incluída">✓</span>' : `<input type="checkbox" class="sel" data-i="${i}" aria-label="Selecionar preço de ${esc(moeda(x.precoUnitario))}, ${esc(x.orgao || '')}">`}</td>
           <td class="num" data-rotulo="Preço unitário"><strong>${moeda(x.precoUnitario)}</strong></td><td class="mono" data-rotulo="Data">${data(x.dataCompra)}</td>
           <td data-rotulo="Fonte"><span class="selo selo--liso">${x.origem === 'pncp' ? 'PNCP' : 'Compras.gov.br'}</span></td>
+          <td data-rotulo="Portal de origem">${seloPortal(x.portalOrigem, x.portalNome)}</td>
           <td class="desc">${esc(x.orgao)}<small>${esc([[x.municipio, x.uf].filter(Boolean).join('/'), x.esfera].filter(Boolean).join(' · '))}</small></td>
           <td class="desc sem-rotulo"><span class="pequeno">${esc((x.descricao || '').slice(0, 220))}</span><small>${esc([x.marca && `Marca: ${x.marca}`, x.fornecedorNome].filter(Boolean).join(' · '))}
             ${x.link ? ` <a href="${esc(x.link)}" target="_blank" rel="noopener noreferrer">ver compra ↗</a>` : ''}</small></td>
-          <td data-rotulo="Unidade">${esc(x.unidade || '—')}</td><td class="num" data-rotulo="Quantidade">${num(x.quantidade, 0)}</td></tr>`).join('')}
+          <td data-rotulo="Unidade">${esc(x.unidade || '—')}</td><td class="num" data-rotulo="Quantidade">${num(x.quantidade, 0)}</td></tr>`)).join('')}
         </tbody></table></div>` : '<p class="vazio">Nenhum preço no período e nos filtros informados. Amplie o período, retire a UF ou as palavras-chave.</p>'}`;
   }
+
+  // --- importação manual de CSV: primeiro confere (nada é gravado), depois importa só as linhas válidas
+  const importacao = { csv: null, portal: null };
+  $('#det-importar').addEventListener('toggle', async (ev) => {
+    const sel = $('#imp-portal');
+    if (!ev.target.open || sel.options.length > 1) return;
+    try {
+      const { portais } = await api('/fontes');
+      sel.insertAdjacentHTML('beforeend', portais.map((x) => `<option value="${esc(x.id)}">${esc(x.nome)}</option>`).join(''));
+    } catch (e) { avisar(e.message, true); }
+  });
+  /** Lê o arquivo como texto: UTF-8 quando válido; senão Windows-1252 (padrão do Excel em português). */
+  async function lerArquivoCsv(arquivo) {
+    const bytes = await arquivo.arrayBuffer();
+    try { return new TextDecoder('utf-8', { fatal: true }).decode(bytes); } catch { return new TextDecoder('windows-1252').decode(bytes); }
+  }
+  function htmlRelatorioImportacao(r, feito = null) {
+    const campos = { precoUnitario: 'preço unitário', dataCompra: 'data', orgao: 'órgão', uf: 'UF', municipio: 'município', fornecedorNome: 'fornecedor', fornecedorNi: 'CNPJ/CPF', marca: 'marca', descricao: 'descrição', unidade: 'unidade', quantidade: 'quantidade', link: 'link', objeto: 'objeto', portal: 'portal de origem', registro: 'registro', considerada: 'considerada' };
+    const comAviso = r.validas.filter((v) => v.avisos.length);
+    return `
+      ${feito ? `<div class="nota nota--neutra" role="status"><strong>${plural(feito.inseridas, 'amostra importada', 'amostras importadas')}.</strong>${feito.jaExistentes ? ` ${plural(feito.jaExistentes, 'linha já estava', 'linhas já estavam')} no item e não foi duplicada.` : ''}</div>` : ''}
+      <p><strong>${plural(r.validas.length, 'linha válida', 'linhas válidas')}</strong> · <strong>${plural(r.rejeitadas.length, 'linha com erro', 'linhas com erro')}</strong> de ${r.totalLinhas} · portal: ${esc(r.portalNome)}${r.repetidas ? ` · ${plural(r.repetidas, 'linha repetida ignorada', 'linhas repetidas ignoradas')}` : ''}${r.puladas ? ` · ${plural(r.puladas, 'linha de resumo pulada', 'linhas de resumo puladas')}` : ''}</p>
+      <p class="ajuda">Colunas reconhecidas: ${r.colunas.map((c) => `${esc(c.cabecalho)} → ${esc(campos[c.campo] || c.campo)}`).join('; ')}.${r.ignoradas.length ? ` Colunas ignoradas: ${esc(r.ignoradas.join('; '))}.` : ''}</p>
+      ${r.rejeitadas.length ? `<div class="tabela-wrap"><table class="tabela--fichas"><thead><tr><th class="num">Linha</th><th>Erro (a linha não será importada)</th><th>Conteúdo</th></tr></thead>
+        <tbody>${r.rejeitadas.map((x) => `<tr><td class="num mono" data-rotulo="Linha">${x.linha}</td><td data-rotulo="Erro">${x.erros.map(esc).join('<br>')}</td><td class="desc" data-rotulo="Conteúdo"><small>${esc(x.conteudo)}</small></td></tr>`).join('')}</tbody></table></div>` : ''}
+      ${comAviso.length ? `<details><summary>${plural(comAviso.length, 'linha válida com aviso', 'linhas válidas com aviso')}</summary><div class="details__corpo"><ul class="ajuda">${comAviso.map((v) => `<li>Linha ${v.linha}: ${v.avisos.map(esc).join(' ')}</li>`).join('')}</ul></div></details>` : ''}`;
+  }
+  $('#form-importar').addEventListener('input', () => { $('#btn-imp-gravar').hidden = true; importacao.csv = null; });
+  $('#form-importar').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    if (!ev.target.reportValidity()) return;
+    const arquivo = $('#imp-arq').files[0];
+    const alvo = $('#imp-relatorio');
+    await executar(ev.submitter, async () => {
+      if (arquivo.size > 900_000) throw new Error('Arquivo muito grande (máximo de cerca de 900 kB). Divida a planilha.');
+      const csv = await lerArquivoCsv(arquivo);
+      const portal = $('#imp-portal').value;
+      try {
+        const { relatorio } = await api(`/itens/${id}/importar`, { method: 'POST', body: { csv, portal, simular: true } });
+        alvo.innerHTML = htmlRelatorioImportacao(relatorio);
+        importacao.csv = csv; importacao.portal = portal;
+        const b = $('#btn-imp-gravar');
+        b.hidden = relatorio.validas.length === 0;
+        b.textContent = `Importar ${plural(relatorio.validas.length, 'linha válida', 'linhas válidas')}`;
+      } catch (e) {
+        alvo.innerHTML = `<div class="nota nota--cobre" role="alert"><strong>Arquivo não importado.</strong> ${esc(e.message)}</div>`;
+        $('#btn-imp-gravar').hidden = true;
+      }
+    });
+  });
+  $('#btn-imp-gravar').addEventListener('click', async (ev) => {
+    if (!importacao.csv) return;
+    await executar(ev.currentTarget, async () => {
+      const r = await api(`/itens/${id}/importar`, { method: 'POST', body: { csv: importacao.csv, portal: importacao.portal } });
+      it = r.item;
+      desenhar();
+      $('#imp-relatorio').innerHTML = htmlRelatorioImportacao(r.relatorio, r);
+      $('#btn-imp-gravar').hidden = true;
+      importacao.csv = null;
+      avisar(`${plural(r.inseridas, 'amostra importada', 'amostras importadas')}.`);
+    });
+  });
+
+  // --- fontes registradas e o estado real de cada uma
+  $('#det-fontes').addEventListener('toggle', async (ev) => {
+    if (!ev.target.open || ev.target.dataset.ok) return;
+    const alvo = $('#lista-fontes');
+    try {
+      const { fontes } = await api('/fontes');
+      alvo.innerHTML = `<ul class="fontes-lista">${fontes.map((f) => `<li>
+        <div><strong>${esc(f.nome)}</strong> ${f.consultaDireta ? '<span class="selo selo--musgo">consulta direta</span>' : '<span class="selo selo--ambar">via PNCP</span>'}</div>
+        <span>${esc(f.estado)}</span><small>${esc(f.verificado)}</small></li>`).join('')}</ul>
+        <p class="ajuda">Tem uma planilha exportada de um desses portais? Use “Importar planilha CSV de preços”, na seção Amostras, e indique o portal de origem.</p>`;
+      ev.target.dataset.ok = '1';
+    } catch (e) { alvo.innerHTML = `<div class="nota nota--cobre">${esc(e.message)}</div>`; }
+  });
+
+  // --- filtro por portal de origem (só exibição)
+  $('#lista-amostras').addEventListener('change', (ev) => {
+    if (ev.target.id !== 'filtro-portal-amostras') return;
+    estado.portalAmostras = ev.target.value;
+    $('#lista-amostras').innerHTML = htmlAmostras(it, estado.portalAmostras);
+    $('#filtro-portal-amostras')?.focus();
+  });
+  $('#res-precos').addEventListener('change', (ev) => {
+    if (ev.target.id !== 'filtro-portal-resultados') return;
+    estado.portalResultados = ev.target.value;
+    desenharResultados();
+    $('#filtro-portal-resultados')?.focus();
+  });
 
   // --- amostras
   async function carregarTrilha() {

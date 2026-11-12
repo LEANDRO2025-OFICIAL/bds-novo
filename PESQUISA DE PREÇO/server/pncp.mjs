@@ -4,7 +4,13 @@
 // por isso as contratações são localizadas pela busca pública do portal (https://pncp.gov.br/api/search/,
 // a mesma de pncp.gov.br/app/editais), conferida ao vivo em 17/10/2026.
 // Mesmo cliente HTTP do Compras.gov.br (cache 24 h, timeout por tentativa, backoff com jitter, reserva em cache), com fila própria.
+// Portal de origem: a contratação (GET /api/consulta/v1/orgaos/{cnpj}/compras/{ano}/{sequencial}, mesmo contrato de
+// consulta acima) traz linkSistemaOrigem e usuarioNome — o sistema em que a disputa ocorreu e quem publicou.
+// ATENÇÃO: esses dois campos constam do contrato publicado, mas esta chamada NÃO pôde ser conferida ao vivo
+// (rede bloqueada no ambiente de desenvolvimento). Por isso ela é opcional: se falhar ou vier sem os campos,
+// o preço entra do mesmo jeito, marcado como "PNCP (origem não identificada)".
 import { obterJson, criarFila, criarRastro, montarUrl, filtrarPorPalavras, ErroApi } from './compras.mjs';
+import { classificarPortal } from './portal-origem.mjs';
 
 export const BASE = 'https://pncp.gov.br';
 const FONTE = 'PNCP';
@@ -30,9 +36,14 @@ function resultadoValido(r) {
 }
 
 /** Converte contratação (da busca) + item + resultado do PNCP para o formato interno de amostra. */
-export function normalizarResultado(c, item, r) {
+export function normalizarResultado(c, item, r, compra = null) {
+  const linkSistemaOrigem = compra?.linkSistemaOrigem ?? null;
+  const sistemaOrigem = compra?.usuarioNome ?? null;
   return {
     origem: 'pncp',
+    portalOrigem: classificarPortal({ origem: 'pncp', linkSistemaOrigem, sistema: sistemaOrigem }),
+    sistemaOrigem,
+    linkSistemaOrigem,
     chaveOrigem: `pncp-${c.numero_controle_pncp}-${item.numeroItem}-${r.sequencialResultado}`,
     dataCompra: dia(r.dataResultado),
     orgao: [c.orgao_nome, c.unidade_nome].filter(Boolean).join(' — ') || null,
@@ -67,9 +78,21 @@ async function precosDaContratacao(db, c, termo, o) {
   const alvos = filtrarPorPalavras(itens.filter((i) => i.temResultado), termo);
   const porItem = await Promise.all(alvos.map(async (i) => {
     const resultados = (await obterJson(db, `${base}/${i.numeroItem}/resultados`, o)) || []; // 204 = sem resultado
-    return resultados.filter(resultadoValido).map((r) => normalizarResultado(c, i, r));
+    return resultados.filter(resultadoValido).map((r) => ({ i, r }));
   }));
-  return porItem.flat();
+  const validos = porItem.flat();
+  if (!validos.length) return [];
+  const compra = await dadosDaContratacao(db, c, o); // só para quem tem preço aproveitável: 1 chamada a mais por contratação
+  return validos.map(({ i, r }) => normalizarResultado(c, i, r, compra));
+}
+
+/** Dados da contratação (para o portal de origem). Opcional: qualquer falha devolve null e não derruba a consulta. */
+async function dadosDaContratacao(db, c, o) {
+  try {
+    return await obterJson(db, `${BASE}/api/consulta/v1/orgaos/${c.orgao_cnpj}/compras/${c.ano}/${c.numero_sequencial}`, { ...o, tentativas: Math.min(2, o.tentativas ?? 2) });
+  } catch {
+    return null;
+  }
 }
 
 /**

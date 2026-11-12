@@ -506,3 +506,18 @@ td .botoes { flex-wrap: nowrap; gap: var(--space-1); }
 @media print {
   .topo, .rodape, .lote, .aviso { display: none; }
 }
+
+/* Portal de origem: filtro acima das listas de preços e resumo de cobertura */
+.filtro-portal { max-width: 24rem; margin: 0 0 var(--space-3); }
+.botoes > .filtro-portal { margin: 0 0 0 auto; min-width: 14rem; }
+.cobertura { margin: var(--space-4) 0; padding: var(--space-3) 0 0; border-top: 1px solid var(--color-line); }
+.cobertura__lista { list-style: none; margin: var(--space-2) 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-2) var(--space-4); }
+.cobertura__lista li { display: grid; grid-template-columns: auto 1fr; column-gap: var(--space-2); align-items: baseline; font-size: .85rem; }
+.cobertura__lista strong { font-size: 1.05rem; min-width: 1.6rem; text-align: right; }
+.cobertura__lista small { grid-column: 2; color: var(--color-iron-light); font-size: .74rem; }
+.cobertura__lista .zero { opacity: .5; }
+.cobertura__lista .cobertura--alerta:not(.zero) strong { color: var(--color-amber); }
+.fontes-lista { list-style: none; margin: 0 0 var(--space-3); padding: 0; display: grid; gap: var(--space-3); }
+.fontes-lista li { display: grid; gap: .2rem; font-size: .85rem; padding-bottom: var(--space-3); border-bottom: 1px solid var(--color-line); }
+.fontes-lista li > div { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.fontes-lista small { color: var(--color-iron-light); font-size: .76rem; }

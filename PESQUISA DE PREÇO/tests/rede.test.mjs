@@ -251,15 +251,18 @@ describe('consultas completas contra o servidor falso', () => {
     roteiro.set('/api/search/', [falha(502), ok({ items: [c] })]);
     roteiro.set(itens, [falha(503), falha(503), ok([{ numeroItem: 2, descricao: 'IMPRESSORA JATO DE TINTA', temResultado: true, unidadeMedida: 'UN' }])]);
     roteiro.set(`${itens}/2/resultados`, [ok([{ valorUnitarioHomologado: 4018.89, dataResultado: '2026-10-14', sequencialResultado: 1, niFornecedor: '5' }])]);
+    // dados da contratação (portal de origem): uma chamada a mais, só quando há preço aproveitável
+    roteiro.set('/api/consulta/v1/orgaos/03563335000106/compras/2026/63', [ok({ linkSistemaOrigem: 'https://www.licitanet.com.br/p/1', usuarioNome: 'Licitanet' })]);
     const filtros = { palavras: 'impressora', inicio: '2025-11-11', fim: '2026-11-11' };
     const r = await consultarPrecosPncp(db, filtros, { ...rapido().opcoes, fetchImpl: viaFalso });
     assert.equal(r.registros.length, 1);
     assert.equal(r.registros[0].precoUnitario, 4018.89);
-    assert.equal(pedidos.length, 2 + 3 + 1);
+    assert.equal(r.registros[0].portalOrigem, 'licitanet');
+    assert.equal(pedidos.length, 2 + 3 + 1 + 1);
     assert.equal(r.cache.usado, false);
 
     const de = await consultarPrecosPncp(db, filtros, { ...rapido().opcoes, fetchImpl: viaFalso });
-    assert.equal(pedidos.length, 6);
+    assert.equal(pedidos.length, 7);
     assert.equal(de.cache.total, true);
 
     // fonte cai e o cache vence: a consulta inteira ainda responde, marcada como obsoleta
@@ -269,6 +272,7 @@ describe('consultas completas contra o servidor falso', () => {
     roteiro.set(`${itens}/2/resultados`, [falha(503)]);
     const queda = await consultarPrecosPncp(db, filtros, { ...rapido({ tentativas: 2 }).opcoes, fetchImpl: viaFalso });
     assert.equal(queda.registros.length, 1);
+    assert.equal(queda.registros[0].portalOrigem, 'licitanet', 'portal de origem também vem do cache vencido');
     assert.equal(queda.cache.obsoleto, true);
     assert.match(queda.cache.motivo, /PNCP respondeu 503/);
   });

@@ -1,6 +1,7 @@
 // Mapa de apuração de preços: página HTML própria, feita para impressão / "Salvar como PDF" (A4, papel claro).
 // Tudo é gerado no servidor, sem biblioteca: tabela-resumo, gráfico de barras em SVG por item, declaração e anexos.
 // A página é servida com CSP estrita: nada de style="" embutido — o SVG usa só atributos de apresentação e classes.
+import { nomePortal, coberturaPorPortal } from './portal-origem.mjs';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const BRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -23,9 +24,15 @@ export function descreverCriterio(c) {
 }
 const NOME_ORIGEM = {
   'compras.gov.br': 'Compras.gov.br', pncp: 'PNCP', 'cotacao-fornecedor': 'Cotação com fornecedor', 'midia-especializada': 'Mídia/tabela especializada',
-  'site-eletronico': 'Site eletrônico', 'contratacao-similar': 'Contratação similar', 'nota-fiscal': 'Nota fiscal eletrônica', manual: 'Lançamento manual',
+  'site-eletronico': 'Site eletrônico', 'contratacao-similar': 'Contratação similar', 'nota-fiscal': 'Nota fiscal eletrônica', manual: 'Lançamento manual', 'importacao-csv': 'Planilha importada pelo usuário',
 };
 const origem = (o) => NOME_ORIGEM[o] || o || '—';
+/** Portal de origem para o anexo: só aparece quando acrescenta informação à fonte (ex.: PNCP → BLL Compras). */
+function portalDe(a) {
+  const id = a.portal_origem;
+  if (!id || id === 'outro' || (id === 'comprasgov' && a.origem === 'compras.gov.br')) return '';
+  return `<span class="fonte-link">Portal de origem: ${esc(id === 'pncp' ? 'não identificado (publicado no PNCP)' : nomePortal(id))}</span>`;
+}
 
 /** Texto seguro para string CSS entre aspas (conteúdo das caixas de margem do @page). */
 export function cssTexto(s) {
@@ -139,7 +146,7 @@ function tabelaAmostras(it, linhas, comMotivo) {
     <thead><tr><th class="num">Nº</th><th>Fonte / órgão</th><th>UF</th><th>Data</th><th>Fornecedor</th><th>Marca</th><th class="num">Preço unit.</th>${comMotivo ? '<th>Motivo da desconsideração</th>' : ''}</tr></thead>
     <tbody>${linhas.map(({ a, n }) => `<tr>
       <td class="num">${n}</td>
-      <td><strong>${esc(origem(a.origem))}</strong>${a.orgao && !/^Fonte:/.test(a.orgao) ? ` — ${esc(a.orgao)}` : ''}${a.municipio ? `, ${esc(a.municipio)}` : ''}${a.link ? `<span class="fonte-link">${esc(a.link)}</span>` : ''}</td>
+      <td><strong>${esc(origem(a.origem))}</strong>${a.orgao && !/^Fonte:/.test(a.orgao) ? ` — ${esc(a.orgao)}` : ''}${a.municipio ? `, ${esc(a.municipio)}` : ''}${portalDe(a)}${a.link ? `<span class="fonte-link">${esc(a.link)}</span>` : ''}</td>
       <td class="curto">${esc(a.uf || '—')}</td><td class="mono curto">${dataBr(a.data_compra)}</td>
       <td>${esc(a.fornecedor_nome || '—')}${a.fornecedor_ni ? `<span class="fonte-link">${esc(a.fornecedor_ni)}</span>` : ''}</td>
       <td>${esc(a.marca || '—')}</td>
@@ -159,6 +166,12 @@ export function renderizarMapa(p, { emitidoEm = new Date(), nonce = '', fuso = u
   const totalValidas = p.itens.reduce((s, it) => s + it.estimativa.resumo.n, 0);
   const insuficientes = p.itens.filter((it) => it.estimativa.resumo.n < 3);
   const fontes = [...new Set(p.itens.flatMap((it) => it.amostras.map((a) => origem(a.origem))))];
+  const cob = coberturaPorPortal(p.itens.flatMap((it) => it.amostras));
+  const textoCobertura = cob.total ? `Cobertura por portal de origem (${cob.total} ${cob.total === 1 ? 'amostra coletada' : 'amostras coletadas'}): ${
+    cob.porPortal.filter((l) => l.amostras > 0 && l.portal !== 'pncp' && l.portal !== 'outro').map((l) => `${l.nome} ${l.amostras}`).concat(
+      cob.semOrigem ? [`publicadas no PNCP sem portal de origem identificável ${cob.semOrigem}`] : [],
+      cob.outros ? [`outras fontes (cotações diretas, sites, importações sem portal) ${cob.outros}`] : [],
+    ).join('; ')}.` : '';
   const numerar = (it) => it.amostras.map((a, i) => ({ a, n: i + 1 }));
 
   const paginaCss = `@page{@top-left{content:"Banco de Preços LS · Mapa de apuração de preços"}@top-right{content:"${cssTexto(p.processo ? `Processo ${p.processo}` : p.titulo.slice(0, 80))}"}@bottom-left{content:"Emitido em ${cssTexto(emitido)} · Responsável: ${cssTexto(responsavel.slice(0, 60))} · Lei nº 14.133/2021, art. 23 · IN SEGES/ME nº 65/2021"}@bottom-right{content:"Página " counter(page) " de " counter(pages)}}@page :first{@top-left{content:""}@top-right{content:""}}`;
@@ -257,6 +270,7 @@ export function renderizarMapa(p, { emitidoEm = new Date(), nonce = '', fuso = u
     <h2><span class="secao-n">3</span> Metodologia e declaração de conformidade</h2>
     <div class="conformidade__texto">
       <p>Os preços foram coletados nos parâmetros do art. 5º da IN SEGES/ME nº 65/2021${fontes.length ? ` (${esc(fontes.join('; '))})` : ''}, priorizados os sistemas oficiais de governo e as contratações similares da Administração Pública, e tratados conforme o art. 6º: o preço recomendado de cada item resulta da média, da mediana ou do menor dos valores válidos, conforme indicado no quadro-resumo.</p>
+      ${textoCobertura ? `<p class="legenda-tabela cobertura-portais">${esc(textoCobertura)}</p>` : ''}
       <p>Valores inexequíveis, inconsistentes ou excessivamente elevados foram desconsiderados por critério objetivo ou por decisão fundamentada, com o motivo e a justificativa registrados individualmente no Anexo II (art. 6º, §§ 3º e 4º).${insuficientes.length ? ` <strong>Atenção:</strong> ${insuficientes.length === 1 ? 'o item' : 'os itens'} ${insuficientes.map((it) => p.itens.indexOf(it) + 1).join(', ')} ${insuficientes.length === 1 ? 'tem' : 'têm'} menos de três preços válidos e ${insuficientes.length === 1 ? 'exige' : 'exigem'} justificativa nos autos, aprovada pela autoridade competente (art. 6º, § 5º).` : ''}</p>
     </div>
     <div class="declaracao">

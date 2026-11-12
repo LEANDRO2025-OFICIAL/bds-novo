@@ -3,6 +3,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { classificarPortal } from './portal-origem.mjs';
 
 const SCHEMA = `
 PRAGMA journal_mode = WAL;
@@ -99,6 +100,8 @@ CREATE INDEX IF NOT EXISTS decisoes_item ON decisoes(item_id, id);
 const COLUNAS_NOVAS = [
   ['pesquisas', 'metodo_padrao', "TEXT NOT NULL DEFAULT 'auto'"],
   ['pesquisas', 'criterio_padrao', `TEXT NOT NULL DEFAULT '{"tipo":"nenhum"}'`],
+  // Portal em que a contratação ocorreu (ids de server/portal-origem.mjs). NULL só em linhas ainda não classificadas.
+  ['amostras', 'portal_origem', 'TEXT'],
 ];
 
 function migrar(db) {
@@ -106,6 +109,19 @@ function migrar(db) {
     const existe = db.prepare(`PRAGMA table_info(${tabela})`).all().some((c) => c.name === coluna);
     if (!existe) db.exec(`ALTER TABLE ${tabela} ADD COLUMN ${coluna} ${definicao}`);
   }
+  classificarAmostrasAntigas(db);
+}
+
+/**
+ * Amostras gravadas antes da coluna portal_origem: classifica pelo que já está guardado (fonte + link).
+ * As do PNCP ficam como "pncp" (origem não identificada) — o sistema de origem não era guardado; para
+ * identificá-las, busque de novo e adicione outra vez. Idempotente: só toca em linhas com NULL.
+ */
+function classificarAmostrasAntigas(db) {
+  const pendentes = db.prepare('SELECT id, origem, link FROM amostras WHERE portal_origem IS NULL').all();
+  if (!pendentes.length) return;
+  const gravar = db.prepare('UPDATE amostras SET portal_origem = ? WHERE id = ?');
+  transacao(db, () => { for (const a of pendentes) gravar.run(classificarPortal({ origem: a.origem, link: a.link }), a.id); });
 }
 
 export function abrirBanco(caminho) {

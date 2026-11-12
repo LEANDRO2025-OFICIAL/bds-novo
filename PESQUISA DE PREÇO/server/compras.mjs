@@ -197,6 +197,7 @@ export function normalizarRegistro(r) {
   const unidade = r.siglaUnidadeFornecimento || r.nomeUnidadeFornecimento || r.siglaUnidadeMedida || r.nomeUnidadeMedida || null;
   return {
     origem: 'compras.gov.br',
+    portalOrigem: 'comprasgov',
     chaveOrigem: String(r.idCompraItem || `${r.idCompra}-${r.numeroItemCompra}`),
     dataCompra: r.dataResultado || r.dataCompra || null,
     orgao: [r.nomeOrgao, r.nomeUasg].filter(Boolean).join(' — ') || null,

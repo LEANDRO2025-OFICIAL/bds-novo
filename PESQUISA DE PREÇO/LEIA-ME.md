@@ -20,7 +20,80 @@ Sistema local de pesquisa de preços em contratações públicas, com análise c
 - **API de Dados Abertos do Compras.gov.br** — módulos Material, Serviço e Pesquisa de Preço
   (https://dadosabertos.compras.gov.br). Dados públicos, sem login.
 - **PNCP** (https://pncp.gov.br) — itens de contratações de todas as esferas, buscados por palavras-chave.
-- Cotações de fornecedores, sites e outros portais podem ser lançadas manualmente (art. 5º, III a V).
+- Cotações de fornecedores, sites e outros portais podem ser lançadas manualmente (art. 5º, III a V)
+  ou importadas de planilha CSV (ver abaixo).
+
+## Integração com portais de compras
+
+O pedido foi integrar ComprasGov, PNCP, Portal de Compras Públicas, BLL, BNC, Licitanet e Licitar Digital.
+O que existe de fato, sem exagero:
+
+| Fonte | Como entra no sistema | Consulta direta? |
+|---|---|---|
+| Compras.gov.br | API de Dados Abertos (por código CATMAT/CATSER) | **Sim** |
+| PNCP | APIs públicas do PNCP (por palavras-chave) | **Sim** |
+| Portal de Compras Públicas | Pelo que o portal publica no PNCP | Não — via PNCP |
+| BLL Compras | Pelo que o portal publica no PNCP | Não — via PNCP |
+| BNC | Pelo que o portal publica no PNCP | Não — via PNCP |
+| Licitanet | Pelo que o portal publica no PNCP | Não — via PNCP |
+| Licitar Digital | Pelo que o portal publica no PNCP | Não — via PNCP |
+
+**Integração direta** quer dizer que o sistema chama a API pública da fonte e normaliza a resposta:
+só Compras.gov.br e PNCP. **Via PNCP** quer dizer que o sistema não fala com o portal; como a Lei
+14.133/2021 (art. 174) obriga a publicação das contratações no PNCP, os preços dos portais privados
+chegam pela consulta ao PNCP e são reconhecidos pelo **portal de origem**. Não há conector direto para
+os portais privados: não há API pública documentada que tenha podido ser conferida, e o sistema não
+raspa área logada nem contorna captcha ou termos de uso.
+
+**Portal de origem.** Cada preço guarda o portal em que a contratação ocorreu (coluna na lista de
+amostras e no resultado da consulta, filtro por portal, coluna no CSV e menção no anexo do mapa A4).
+Para o PNCP, a classificação usa o link do sistema de origem (`linkSistemaOrigem`) e o nome de quem
+publicou (`usuarioNome`) da contratação, comparados com a tabela de domínios e nomes em
+`server/portal-origem.mjs` — um único lugar, fácil de editar. Sem pista reconhecida, o preço fica como
+**"PNCP — origem não identificada"**. Amostras gravadas antes desta versão foram classificadas pela fonte
+e pelo link guardados (as do PNCP ficam "não identificadas": o sistema de origem não era guardado).
+
+**Cobertura.** A tela do item, a da pesquisa e o resultado de cada consulta mostram quantas amostras
+vieram de cada portal (inclusive os zeros) e quantas não têm origem identificável. É a medida honesta de
+quanto dos portais privados está de fato coberto. O mapa A4 traz a mesma contagem.
+
+**Contrato de fonte.** `server/fontes.mjs` define a interface única (buscar por código/descrição →
+amostras normalizadas com portal de origem) e o registro das sete fontes, com o estado de cada uma
+(também em `GET /api/fontes` e no quadro "Fontes e portais" da tela do item).
+
+### O que NÃO foi verificado contra as APIs reais
+
+O ambiente em que esta parte foi desenvolvida não alcançava pncp.gov.br, compras.gov.br nem os portais
+privados (bloqueio de rede). Portanto:
+
+- A chamada que lê `linkSistemaOrigem`/`usuarioNome`
+  (`/api/consulta/v1/orgaos/{cnpj}/compras/{ano}/{sequencial}`) segue o contrato publicado do PNCP, mas
+  **não foi conferida ao vivo**. Ela é opcional: se falhar ou vier sem esses campos, o preço entra igual,
+  como "origem não identificada". Os testes usam valores ilustrativos, não respostas capturadas.
+- **Os domínios e nomes da tabela de portais não foram conferidos** contra o que o PNCP de fato devolve.
+  Se a cobertura mostrar muitas amostras "não identificadas", abra algumas no PNCP, veja o link do sistema
+  de origem e acrescente o domínio em `server/portal-origem.mjs`.
+- Nenhuma API dos portais privados foi consultada. Busca, itens e resultados do PNCP e a API do
+  Compras.gov.br foram conferidos ao vivo em outubro de 2026, em versões anteriores.
+
+### Importar planilha CSV (rota de fuga)
+
+Para preços que você exportou de qualquer portal (inclusive dos privados), na tela do item abra
+**"Importar planilha CSV de preços"**:
+
+1. Escolha o arquivo e o **portal de origem** dos preços.
+2. Clique em **Conferir arquivo**: nada é gravado; aparece o relatório com as colunas reconhecidas, as
+   linhas válidas e cada linha com erro (número da linha do arquivo e o motivo).
+3. Clique em **Importar linhas válidas**. Linhas com erro nunca entram. Reimportar o mesmo arquivo não
+   duplica amostras.
+
+Formato: primeira linha com os nomes das colunas; obrigatória **Preço unitário** (ou "Valor unitário");
+reconhecidas também Data, Órgão, UF, Município, Fornecedor, CNPJ/CPF, Marca, Descrição, Unidade,
+Quantidade, Link, Objeto e Portal de origem (que, se preenchida, vale para a linha). Separador `;`, `,`
+ou tabulação; decimais com vírgula ("R$ 1.234,56"); datas DD/MM/AAAA; UTF-8 ou o padrão do Excel em
+português. Planilhas `.xlsx` devem ser salvas antes como CSV. Máximo de 1.000 linhas e cerca de 900 kB por
+arquivo. O CSV exportado por este próprio sistema também pode ser reimportado (as linhas RESUMO são puladas).
+Os cabeçalhos aceitos ficam em `server/importacao.mjs` (constante `COLUNAS`).
 
 ## Inicialização e portas
 
@@ -87,8 +160,8 @@ Node.js 22.13 ou superior (usa o SQLite nativo do Node). Sem outras dependência
 
 ## Testes
 
-`npm test` — 98 testes (estatística e exclusão de discrepantes, clientes das APIs, integração HTTP,
-backup, CSV, mapa, inicialização, login e segurança).
+`npm test` — 171 testes (estatística e exclusão de discrepantes, clientes das APIs, portal de origem,
+contrato de fontes, importação de CSV, integração HTTP, backup, CSV, mapa, inicialização, login e segurança).
 
 ## Publicar grátis a partir deste computador (Tailscale Funnel)
 
