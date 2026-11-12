@@ -4,24 +4,33 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Banco de Preços LS</title>
-    <meta name="description" content="Pesquisa de preços em contratações públicas (Compras.gov.br) conforme a IN SEGES/ME 65/2021." />
-    <meta name="color-scheme" content="light dark" />
-    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="app.css" />
-    <script type="module" src="app.js"></script>
+    <meta name="description" content="Pesquisa de preços em contratações públicas (Compras.gov.br e PNCP) conforme a Lei 14.133/2021 e a IN SEGES/ME 65/2021." />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#0a0e14" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preload" href="/fonts/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/playfair-display-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="/fontes.css" />
+    <link rel="stylesheet" href="/app.css" />
+    <script type="module" src="/app.js"></script>
   </head>
   <body>
     <a class="pular" href="#conteudo">Pular para o conteúdo</a>
-    <header class="topo nao-imprimir">
-      <a class="marca" href="#/">
-        <svg viewBox="0 0 24 24" aria-hidden="true" class="marca__icone"><path d="M3 5h18v2H3zm2 4h14v10H5zm3 2v2h8v-2zm0 4v2h5v-2z" /></svg>
-        <span>Banco de Preços LS</span>
+    <header class="topo">
+      <a class="marca" href="#/" aria-label="Banco de Preços LS — início">
+        <svg class="marca__icone" viewBox="0 0 48 48" aria-hidden="true"><rect x="1" y="1" width="46" height="46" rx="8" fill="none" stroke="currentColor" stroke-opacity=".35"/><rect x="11" y="27" width="6" height="11" fill="#94a3b8"/><rect x="21" y="19" width="6" height="19" fill="#d97706"/><rect x="31" y="11" width="6" height="27" fill="#94a3b8"/><line x1="8" y1="19" x2="40" y2="19" stroke="#d97706" stroke-width="1.5" stroke-dasharray="3 2"/></svg>
+        <span class="marca__nome">Banco de Preços <span class="marca__ls">LS</span></span>
       </a>
       <div id="status-catalogo" class="status-catalogo" role="status" aria-live="polite"></div>
       <div id="sessao" class="sessao"></div>
     </header>
     <main id="conteudo" tabindex="-1"></main>
-    <div id="aviso" class="aviso" role="alert" aria-live="assertive" hidden></div>
+    <footer class="rodape">
+      <p class="rodape__lei">Lei nº 14.133/2021, art. 23 <span aria-hidden="true">·</span> IN SEGES/ME nº 65/2021</p>
+      <div id="status-backup" class="rodape__backup" role="status" aria-live="polite"></div>
+    </footer>
+    <div id="aviso" class="aviso" role="status" aria-live="polite" hidden></div>
+    <dialog id="dialogo" class="dialogo" aria-labelledby="dialogo-titulo"></dialog>
     <noscript><p class="noscript">Ative o JavaScript para usar o sistema.</p></noscript>
   </body>
 </html>

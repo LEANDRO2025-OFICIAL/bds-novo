@@ -15,6 +15,8 @@ services:
         value: 0.0.0.0
       - key: DB_PATH
         value: /var/data/pesquisa-precos.db
+      - key: FUSO_HORARIO # o servidor roda em UTC; data de emissão do mapa no horário de MS
+        value: America/Campo_Grande
       - key: USUARIOS # "nome:senha;outro:senha" — preenchido no painel, nunca no Git
         sync: false
     disk:

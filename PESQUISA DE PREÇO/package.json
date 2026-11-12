@@ -6,7 +6,7 @@
   "type": "module",
   "engines": { "node": ">=22.13" },
   "scripts": {
-    "start": "node server/server.mjs",
-    "test": "node --test tests/estatistica.test.mjs tests/compras.test.mjs tests/pncp.test.mjs tests/api.test.mjs tests/auth.test.mjs"
+    "start": "node --disable-warning=ExperimentalWarning server/server.mjs",
+    "test": "node --test tests/*.test.mjs"
   }
 }

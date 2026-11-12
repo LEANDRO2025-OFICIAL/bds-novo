@@ -1,7 +1,9 @@
 // Persistência local em SQLite nativo do Node (node:sqlite). Um arquivo só: data/pesquisa-precos.db
+// abrirBanco cria a pasta (data/) se ela não existir.
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { classificarPortal } from './portal-origem.mjs';
 
 const SCHEMA = `
 PRAGMA journal_mode = WAL;
@@ -79,12 +81,54 @@ CREATE TABLE IF NOT EXISTS amostras (
   UNIQUE (item_id, chave_origem)
 );
 CREATE INDEX IF NOT EXISTS amostras_item ON amostras(item_id);
+
+-- Trilha de auditoria das decisões sobre amostras (art. 6º, § 3º): quem desconsiderou/reconsiderou o quê, quando e por quê.
+CREATE TABLE IF NOT EXISTS decisoes (
+  id INTEGER PRIMARY KEY,
+  item_id INTEGER NOT NULL REFERENCES itens(id) ON DELETE CASCADE,
+  amostra_id INTEGER NOT NULL,
+  acao TEXT NOT NULL CHECK (acao IN ('desconsiderar', 'considerar', 'criterio', 'justificar', 'remover')),
+  preco_unitario REAL,
+  justificativa TEXT,
+  usuario TEXT,
+  em TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS decisoes_item ON decisoes(item_id, id);
 `;
+
+// Colunas acrescentadas depois da 1ª versão. Só ADD COLUMN: bancos existentes são preservados.
+const COLUNAS_NOVAS = [
+  ['pesquisas', 'metodo_padrao', "TEXT NOT NULL DEFAULT 'auto'"],
+  ['pesquisas', 'criterio_padrao', `TEXT NOT NULL DEFAULT '{"tipo":"nenhum"}'`],
+  // Portal em que a contratação ocorreu (ids de server/portal-origem.mjs). NULL só em linhas ainda não classificadas.
+  ['amostras', 'portal_origem', 'TEXT'],
+];
+
+function migrar(db) {
+  for (const [tabela, coluna, definicao] of COLUNAS_NOVAS) {
+    const existe = db.prepare(`PRAGMA table_info(${tabela})`).all().some((c) => c.name === coluna);
+    if (!existe) db.exec(`ALTER TABLE ${tabela} ADD COLUMN ${coluna} ${definicao}`);
+  }
+  classificarAmostrasAntigas(db);
+}
+
+/**
+ * Amostras gravadas antes da coluna portal_origem: classifica pelo que já está guardado (fonte + link).
+ * As do PNCP ficam como "pncp" (origem não identificada) — o sistema de origem não era guardado; para
+ * identificá-las, busque de novo e adicione outra vez. Idempotente: só toca em linhas com NULL.
+ */
+function classificarAmostrasAntigas(db) {
+  const pendentes = db.prepare('SELECT id, origem, link FROM amostras WHERE portal_origem IS NULL').all();
+  if (!pendentes.length) return;
+  const gravar = db.prepare('UPDATE amostras SET portal_origem = ? WHERE id = ?');
+  transacao(db, () => { for (const a of pendentes) gravar.run(classificarPortal({ origem: a.origem, link: a.link }), a.id); });
+}
 
 export function abrirBanco(caminho) {
   if (caminho !== ':memory:') mkdirSync(dirname(caminho), { recursive: true });
   const db = new DatabaseSync(caminho);
   db.exec(SCHEMA);
+  migrar(db);
   return db;
 }
 

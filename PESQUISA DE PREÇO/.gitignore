@@ -3,3 +3,4 @@ usuarios.txt
 node_modules/
 .claude/
 *.log
+.env

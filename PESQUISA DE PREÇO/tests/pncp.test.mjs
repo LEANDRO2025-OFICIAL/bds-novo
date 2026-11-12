@@ -22,6 +22,9 @@ const RESULTADO = {
   moedaEstrangeira: null, situacaoCompraItemResultadoId: 1, situacaoCompraItemResultadoNome: 'Informado', sequencialResultado: 1,
 };
 
+// Dados da contratação: formato do contrato publicado (linkSistemaOrigem, usuarioNome). Valores ILUSTRATIVOS, não capturados ao vivo.
+const COMPRA = { numeroControlePNCP: '03563335000106-1-000063/2026', linkSistemaOrigem: 'https://www.portaldecompraspublicas.com.br/processos/ms/x/pe-63-2026', usuarioNome: 'Portal de Compras Públicas' };
+
 const resposta = (status, corpo) => ({ ok: status < 400, status, text: async () => (corpo === undefined ? '' : JSON.stringify(corpo)) });
 
 describe('normalização PNCP', () => {
@@ -39,6 +42,20 @@ describe('normalização PNCP', () => {
     assert.equal(r.unidade, 'UN');
     assert.equal(r.link, 'https://pncp.gov.br/app/editais/03563335000106/2026/63');
     assert.equal(r.link, linkContratacao('03563335000106', '2026', '63'));
+    assert.equal(r.portalOrigem, 'pncp', 'sem dados da contratação a origem não é identificável');
+  });
+
+  test('portal de origem: link do sistema de origem, depois nome de quem publicou; ausência → pncp', () => {
+    const po = (compra) => normalizarResultado(CONTRATACAO, ITEM, RESULTADO, compra).portalOrigem;
+    assert.equal(po(COMPRA), 'portal-de-compras-publicas');
+    assert.equal(po({ linkSistemaOrigem: 'https://bllcompras.com/Process/ProcessView?param1=1' }), 'bll');
+    assert.equal(po({ linkSistemaOrigem: null, usuarioNome: 'Licitanet Licitações Eletrônicas' }), 'licitanet');
+    assert.equal(po({ linkSistemaOrigem: 'isto não é url', usuarioNome: 'Licitar Digital' }), 'licitar-digital');
+    assert.equal(po({ linkSistemaOrigem: 'https://bnc.org.br/sistema' }), 'bnc');
+    assert.equal(po({ usuarioNome: 'Compras.gov.br' }), 'comprasgov');
+    assert.equal(po({}), 'pncp');
+    assert.equal(po({ linkSistemaOrigem: '', usuarioNome: '' }), 'pncp');
+    assert.equal(po(null), 'pncp');
   });
 });
 
@@ -61,6 +78,7 @@ describe('consulta PNCP com fetch falso', () => {
       urls.push(url);
       const u = new URL(url);
       if (u.pathname === '/api/search/') return resposta(200, busca);
+      if (u.pathname === '/api/consulta/v1/orgaos/03563335000106/compras/2026/63') return resposta(200, COMPRA);
       const m = u.pathname.match(/\/itens(?:\/(\d+)\/resultados)?$/);
       if (m && !m[1]) return resposta(200, Number(u.searchParams.get('pagina')) === 1 ? itens : []);
       if (m) return resultados[m[1]] ? resposta(200, resultados[m[1]]) : resposta(204);
@@ -85,7 +103,10 @@ describe('consulta PNCP com fetch falso', () => {
     assert.equal(busc.searchParams.get('tam_pagina'), String(BUSCA_PAGINA));
     assert.ok(!urls.some((u) => u.includes('/compras/2026/64/') || u.includes('/compras/2026/65/')), 'sem resultado ou cancelada não é consultada');
     assert.ok(!urls.some((u) => u.includes('/itens/1/') || u.includes('/itens/4/')), 'só itens com as palavras e com resultado');
-    assert.equal(urls.length, 4, 'busca + itens + 2 resultados');
+    assert.equal(urls.length, 5, 'busca + itens + 2 resultados + dados da contratação (portal de origem)');
+    assert.equal(r.registros[0].portalOrigem, 'portal-de-compras-publicas');
+    assert.equal(r.registros[0].sistemaOrigem, 'Portal de Compras Públicas');
+    assert.equal(r.registros[0].linkSistemaOrigem, COMPRA.linkSistemaOrigem);
 
     const n = urls.length;
     await consultarPrecosPncp(db, filtros, { fetchImpl });
@@ -110,6 +131,22 @@ describe('consulta PNCP com fetch falso', () => {
 
     const fora = async (url) => (url.includes('/api/search/') ? resposta(200, { items: [outra] }) : resposta(400, { message: 'x' }));
     await assert.rejects(consultarPrecosPncp(null, { palavras: 'impressora' }, { fetchImpl: fora }), ErroApi);
+  });
+
+  test('dados da contratação indisponíveis (404 ou rede) não derrubam a consulta: preço entra como pncp', async () => {
+    const db = abrirBanco(':memory:');
+    const fetchImpl = async (url) => {
+      const u = new URL(url);
+      if (u.pathname === '/api/search/') return resposta(200, { items: [CONTRATACAO] });
+      if (u.pathname.includes('/api/consulta/')) throw new Error('rede caiu');
+      if (u.pathname.endsWith('/itens')) return resposta(200, [ITEM]);
+      if (u.pathname.endsWith('/itens/2/resultados')) return resposta(200, [RESULTADO]);
+      return resposta(404, {});
+    };
+    const r = await consultarPrecosPncp(db, { palavras: 'impressora' }, { fetchImpl, dormirImpl: async () => {} });
+    assert.equal(r.registros.length, 1);
+    assert.equal(r.registros[0].portalOrigem, 'pncp');
+    assert.deepEqual(r.avisos, []);
   });
 });
 
